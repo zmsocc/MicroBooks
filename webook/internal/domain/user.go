@@ -1,3 +1,8 @@
 package domain
 
-var db *gorm.DB
+//import (
+//	"gorm.io/driver/sqlite"
+//	"gorm.io/gorm"
+//)
+//
+//var db *gorm
