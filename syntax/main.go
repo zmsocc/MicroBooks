@@ -11,7 +11,8 @@ func main() {
 	//DeferClosureLoopV1()
 	//DeferClosureLoopV2()
 	//DeferClosureLoopV3()
-	ShareSlice()
+	//ShareSlice()
+	UseOuter()
 }
 
 func DeferClosure() {
@@ -104,4 +105,28 @@ func ShareSlice() {
 	s2[1] = 1999
 	fmt.Printf("s1: %v, len: %d, cap: %d \n", s1, len(s1), cap(s1))
 	fmt.Printf("s2: %v, len: %d, cap: %d \n", s2, len(s2), cap(s2))
+}
+
+type Inner struct {
+}
+
+type Outer struct {
+	Inner
+}
+
+func (o Outer) Name() string {
+	return "Outer"
+}
+
+func (i Inner) Name() string {
+	return "Inner"
+}
+
+func (i Inner) SayHello() {
+	println("hello," + i.Name())
+}
+
+func UseOuter() {
+	var o Outer
+	o.SayHello()
 }
