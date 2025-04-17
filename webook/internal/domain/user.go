@@ -1,8 +1,9 @@
 package domain
 
-//import (
-//	"gorm.io/driver/sqlite"
-//	"gorm.io/gorm"
-//)
-//
-//var db *gorm
+import "time"
+
+type User struct {
+	Email    string
+	Password string
+	Ctime    time.Time
+}
