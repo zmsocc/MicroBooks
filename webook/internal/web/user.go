@@ -3,9 +3,12 @@ package web
 import (
 	"errors"
 	"github.com/gin-contrib/cors"
+	"github.com/gin-contrib/sessions"
+	"github.com/gin-contrib/sessions/redis"
 	"github.com/gin-gonic/gin"
 	"github.com/zmsocc/practice/webook/internal/domain"
 	"github.com/zmsocc/practice/webook/internal/service"
+	"github.com/zmsocc/practice/webook/internal/web/middleware"
 	"net/http"
 	"regexp"
 	"strings"
@@ -37,7 +40,9 @@ func InitWebServer() *gin.Engine {
 	server := gin.Default()
 	server.Use(cors.New(cors.Config{
 		AllowCredentials: true,
-		AllowHeaders:     []string{"Content-Type"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE"},
+		AllowHeaders:     []string{"Content-Type", "Authorization"},
+		ExposeHeaders:    []string{"X-Jwt-Token"},
 		AllowOriginFunc: func(origin string) bool {
 			if strings.HasPrefix(origin, "http://localhost") {
 				return true
@@ -46,15 +51,30 @@ func InitWebServer() *gin.Engine {
 		},
 		MaxAge: 12 * time.Hour,
 	}))
+	//store := cookie.NewStore([]byte("secret"))
+
+	store, err := redis.NewStore(16, "tcp", "localhost:6379", "root", "",
+		// 最后两个参数分别为 authentication, encryption
+		[]byte("95osj3fUD7fo0mlYdDbncXz4VD2igvf0"), []byte("0Pf2r0wZBpXVXlQNdpwCXN4ncnlnZSc3"))
+	if err != nil {
+		panic(err)
+	}
+	// cookie 的名字叫做 ssid
+	server.Use(sessions.Sessions("ssid", store))
+	// 登录校验
+	server.Use(middleware.NewLoginMiddlewareBuild().
+		IgnorePaths("/users/signup").
+		IgnorePaths("/users/login").
+		Build())
 	return server
 }
 
 func (h *UserHandler) RegisterRoutes(server *gin.Engine) {
 	ug := server.Group("/users")
 	ug.POST("/signup", h.SignUp)
-	//ug.POST("/login", u.Login)
+	ug.POST("/login", h.Login)
 	//ug.POST("/edit", u.Edit)
-	//ug.GET("/profile", u.Profile)
+	ug.GET("/profile", h.Profile)
 }
 
 func (h *UserHandler) SignUp(ctx *gin.Context) {
@@ -105,14 +125,33 @@ func (h *UserHandler) SignUp(ctx *gin.Context) {
 	ctx.String(http.StatusOK, "注册成功")
 }
 
-//func (u *UserHandler) Login(ctx *gin.Context) {
-//
-//}
-//
-//func (u *UserHandler) Edit(ctx *gin.Context) {
-//
-//}
-//
-//func (u *UserHandler) Profile(ctx *gin.Context) {
-//
-//}
+func (h *UserHandler) Login(ctx *gin.Context) {
+	type LoginReq struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
+	var req LoginReq
+	if err := ctx.Bind(&req); err != nil {
+		return
+	}
+	u, err := h.svc.Login(ctx, req.Email, req.Password)
+	if errors.Is(err, service.ErrInvalidUserOrEmail) {
+		ctx.String(http.StatusOK, "无效的邮箱或密码")
+		return
+	}
+	if err != nil {
+		ctx.String(http.StatusOK, "系统错误")
+		return
+	}
+	sess := sessions.Default(ctx)
+	sess.Set("userId", u.Id)
+	sess.Options(sessions.Options{
+		MaxAge: 60,
+	})
+	sess.Save()
+	ctx.String(http.StatusOK, "登陆成功")
+}
+
+func (h *UserHandler) Profile(ctx *gin.Context) {
+	ctx.String(http.StatusOK, "这是你的 profile")
+}

@@ -9,7 +9,10 @@ import (
 	"time"
 )
 
-var ErrUserDuplicateEmail = gorm.ErrDuplicatedKey
+var (
+	ErrUserDuplicateEmail = gorm.ErrDuplicatedKey
+	ErrUserNotFound       = gorm.ErrRecordNotFound
+)
 
 type UserDAO struct {
 	db *gorm.DB
@@ -47,6 +50,12 @@ func (d *UserDAO) Insert(ctx context.Context, u User) error {
 		}
 	}
 	return err
+}
+
+func (d *UserDAO) FindByEmail(ctx context.Context, email string) (User, error) {
+	var u User
+	err := d.db.WithContext(ctx).Where("email = ?", email).First(&u).Error
+	return u, err
 }
 
 type User struct {
