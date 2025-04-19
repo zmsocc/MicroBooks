@@ -6,20 +6,20 @@ import (
 	"net/http"
 )
 
-type LoginMiddlewareBuild struct {
+type LoginMiddlewareBuilder struct {
 	paths []string
 }
 
-func NewLoginMiddlewareBuild() *LoginMiddlewareBuild {
-	return &LoginMiddlewareBuild{}
-}
+//func NewLoginMiddlewareBuilder() *LoginMiddlewareBuilder {
+//	return &LoginMiddlewareBuilder{}
+//}
 
-func (l *LoginMiddlewareBuild) IgnorePaths(path string) *LoginMiddlewareBuild {
+func (l *LoginMiddlewareBuilder) IgnorePaths(path string) *LoginMiddlewareBuilder {
 	l.paths = append(l.paths, path)
 	return l
 }
 
-func (l *LoginMiddlewareBuild) Build() gin.HandlerFunc {
+func (l *LoginMiddlewareBuilder) Build() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		for _, path := range l.paths {
 			if ctx.Request.URL.Path == path {
@@ -31,14 +31,5 @@ func (l *LoginMiddlewareBuild) Build() gin.HandlerFunc {
 			ctx.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}
-	}
-}
-
-func (l *LoginMiddlewareBuild) CheckLogin() gin.HandlerFunc {
-	return func(ctx *gin.Context) {
-		if ctx.Request.URL.Path == "/users/signup" || ctx.Request.URL.Path == "/users/login" {
-			return
-		}
-
 	}
 }

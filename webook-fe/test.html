@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>博客平台</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .auth-container, .main-container {
+            display: none;
+            border: 1px solid #ddd;
+            padding: 20px;
+            border-radius: 5px;
+            width: 300px;
+            margin: 50px auto;
+        }
+        .active {
+            display: block;
+        }
+        input, button {
+            width: 100%;
+            padding: 10px;
+            margin: 8px 0;
+            box-sizing: border-box;
+        }
+        .nav-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .content-area {
+            border: 1px solid #ddd;
+            padding: 20px;
+            min-height: 300px;
+        }
+        .error {
+            color: red;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+<!-- 认证模块 -->
+<div id="authSection">
+    <button onclick="showForm('login')">登录</button>
+    <button onclick="showForm('signup')">注册</button>
+
+    <!-- 登录表单 -->
+    <div id="loginForm" class="auth-container">
+        <h2>登录</h2>
+        <div id="loginError" class="error"></div>
+        <input type="email" id="loginEmail" placeholder="邮箱">
+        <input type="password" id="loginPassword" placeholder="密码">
+        <button onclick="handleLogin()">登录</button>
+    </div>
+
+    <!-- 注册表单 -->
+    <div id="signupForm" class="auth-container">
+        <h2>注册</h2>
+        <div id="signupError" class="error"></div>
+        <input type="email" id="signupEmail" placeholder="邮箱">
+        <input type="password" id="signupPassword" placeholder="密码">
+        <input type="password" id="confirmPassword" placeholder="确认密码">
+        <button onclick="handleSignup()">注册</button>
+    </div>
+</div>
+
+<!-- 主页面 -->
+<div id="mainSection" class="main-container">
+    <div class="nav-buttons">
+        <button onclick="showContent('profile')">个人信息</button>
+        <button onclick="showContent('edit')">编辑信息</button>
+        <button onclick="showContent('write')">写作</button>
+        <button onclick="showContent('read')">阅读</button>
+    </div>
+
+    <div class="content-area" id="contentDisplay">
+        <!-- 默认显示阅读内容 -->
+        <div id="readContent">
+            <h3>最新文章列表</h3>
+            <ul id="articleList"></ul>
+        </div>
+
+        <!-- 其他内容区域 -->
+        <div id="profileContent" style="display: none;">
+            <h3>个人信息</h3>
+            <p>邮箱：<span id="profileEmail"></span></p>
+        </div>
+
+        <div id="editContent" style="display: none;">
+            <h3>编辑信息</h3>
+            <input type="password" id="newPassword" placeholder="新密码">
+            <button onclick="updatePassword()">更新密码</button>
+        </div>
+
+        <div id="writeContent" style="display: none;">
+            <h3>写作面板</h3>
+            <input type="text" id="articleTitle" placeholder="标题">
+            <textarea id="articleContent" rows="6" placeholder="内容"></textarea>
+            <button onclick="publishArticle()">发布文章</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 显示表单切换
+    function showForm(formType) {
+        document.querySelectorAll('.auth-container').forEach(el => el.classList.remove('active'));
+        document.getElementById(`${formType}Form`).classList.add('active');
+    }
+
+    // 处理注册
+    async function handleSignup() {
+        const email = document.getElementById('signupEmail').value;
+        const password = document.getElementById('signupPassword').value;
+        const confirm = document.getElementById('confirmPassword').value;
+
+        // 前端简单验证
+        if (password !== confirm) {
+            showError('signupError', '两次输入的密码不同');
+            return;
+        }
+
+        try {
+            const response = await fetch('http://localhost:8080/users/signup', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ email, password, confirmPassword: confirm }),
+                credentials: 'include'
+            });
+
+            const text = await response.text();
+            if (!response.ok) {
+                showError('signupError', text);
+            } else {
+                alert('注册成功，请登录');
+                showForm('login');
+            }
+        } catch (err) {
+            showError('signupError', '网络请求失败');
+        }
+    }
+
+    // 处理登录
+    async function handleLogin() {
+        const email = document.getElementById('loginEmail').value;
+        const password = document.getElementById('loginPassword').value;
+
+        try {
+            const response = await fetch('http://localhost:8080/users/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ email, password }),
+                // 必须设置这个才能发送和接受 cookie
+                credentials: 'include'
+            });
+
+            const text = await response.text();
+            if (!response.ok) {
+                showError('loginError', text);
+            } else {
+                // 登录成功后显示主页面
+                document.getElementById('authSection').style.display = 'none';
+                document.getElementById('mainSection').style.display = 'block';
+                showContent('read'); // 默认显示阅读界面
+            }
+        } catch (err) {
+            showError('loginError', '网络请求失败');
+        }
+    }
+
+    // 页面加载时检查登录状态
+    async function checkLogin() {
+        try {
+            const response = await fetch('http://localhost:8080/users/login', {
+                method: 'POST',
+                credentials: 'include'
+            });
+            const data = await response.json();
+            if (data.isLogin) {
+                // 已登录则显示主界面
+                document.getElementById('authSection').style.display = 'none';
+                document.getElementById('mainSection').style.display = 'block';
+            }
+        } catch (err) {
+            console.error('状态检查失败:', err);
+        }
+    }
+
+    // 页面加载时执行
+    window.onload = checkLogin;
+
+    // 内容区域切换
+    function showContent(type) {
+        document.querySelectorAll('#contentDisplay > div').forEach(el => {
+            el.style.display = 'none';
+        });
+        document.getElementById(`${type}Content`).style.display = 'block';
+    }
+
+    function showError(elementId, message) {
+        const errorEl = document.getElementById(elementId);
+        errorEl.textContent = message;
+        setTimeout(() => errorEl.textContent = '', 3000);
+    }
+
+    // 初始化显示登录表单
+    showForm('login');
+</script>
+</body>
+</html>

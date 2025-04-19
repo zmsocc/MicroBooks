@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	mysql2 "github.com/go-sql-driver/mysql"
-	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"time"
 )
@@ -22,18 +21,6 @@ func NewUserDAO(db *gorm.DB) *UserDAO {
 	return &UserDAO{
 		db: db,
 	}
-}
-
-func InitDB() *gorm.DB {
-	db, err := gorm.Open(mysql.Open("root:root@tcp(localhost:13336)/webook"))
-	if err != nil {
-		panic(err)
-	}
-	err = InitTables(db)
-	if err != nil {
-		panic(err)
-	}
-	return db
 }
 
 func (d *UserDAO) Insert(ctx context.Context, u User) error {
