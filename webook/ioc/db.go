@@ -7,13 +7,17 @@ import (
 )
 
 func InitDB() *gorm.DB {
-	type Config struct {
-		DSN string `json:"dsn"`
+	var cfg = WebookConfig{
+		DB: DBConfig{
+			DSN: "root:root@tcp(localhost:13336)/webook",
+		},
+		Redis: RedisConfig{
+			Addr:     "localhost:6379",
+			Password: "",
+			DB:       1,
+		},
 	}
-	var cfg = Config{
-		DSN: "root:root@tcp(localhost:13336)/webook",
-	}
-	db, err := gorm.Open(mysql.Open(cfg.DSN))
+	db, err := gorm.Open(mysql.Open(cfg.DB.DSN))
 	if err != nil {
 		panic(err)
 	}
@@ -22,4 +26,19 @@ func InitDB() *gorm.DB {
 		panic(err)
 	}
 	return db
+}
+
+type DBConfig struct {
+	DSN string `json:"dsn"`
+}
+
+type RedisConfig struct {
+	Addr     string `json:"addr"`
+	Password string `json:"password"`
+	DB       int    `json:"db"`
+}
+
+type WebookConfig struct {
+	DB    DBConfig
+	Redis RedisConfig
 }

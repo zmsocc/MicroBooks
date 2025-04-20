@@ -6,9 +6,8 @@ import (
 )
 
 func InitRedis() redis.Cmdable {
-	addr := viper.GetString("redis.addr")
 	redisClient := redis.NewClient(&redis.Options{
-		Addr: addr,
+		Addr: viper.GetString("redis.addr"),
 	})
 	return redisClient
 }
