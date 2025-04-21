@@ -10,6 +10,7 @@ import (
 	"github.com/zmsocc/practice/webook/internal/web/ijwt"
 	"github.com/zmsocc/practice/webook/pkg/ginx"
 	"net/http"
+	"time"
 )
 
 const (
@@ -39,8 +40,8 @@ func (h *UserHandler) RegisterRoutes(server *gin.Engine) {
 	ug := server.Group("/users")
 	ug.POST("/signup", h.SignUp)
 	ug.POST("/login", ginx.WrapBodyV1(h.LoginJWT))
-	//ug.POST("/edit", u.Edit)
-	ug.GET("/profile", h.Profile)
+	//ug.POST("/edit", h.Edit)
+	ug.GET("/profile", h.ProfileJWT)
 }
 
 func (h *UserHandler) SignUp(ctx *gin.Context) {
@@ -138,6 +139,24 @@ func (h *UserHandler) LoginJWT(ctx *gin.Context) (Result, error) {
 	return Result{Msg: "登录成功"}, nil
 }
 
-func (h *UserHandler) Profile(ctx *gin.Context) {
+func (h *UserHandler) ProfileJWT(ctx *gin.Context) {
+	type ProfileReq struct {
+		Email    string `json:"email"`
+		Nickname string `json:"nickname"`
+		Birthday string `json:"birthday"`
+		AboutMe  string `json:"about_me"`
+	}
+	uc := ctx.MustGet("uc").(ijwt.UserClaims)
+	u, err := h.svc.Profile(ctx, uc.Uid)
+	if err != nil {
+		ctx.String(http.StatusOK, "系统错误")
+		return
+	}
+	ctx.JSON(http.StatusOK, ProfileReq{
+		Email:    u.Email,
+		Nickname: u.Nickname,
+		Birthday: u.Birthday.Format(time.DateOnly),
+		AboutMe:  u.AboutMe,
+	})
 	ctx.String(http.StatusOK, "这是你的 profile")
 }

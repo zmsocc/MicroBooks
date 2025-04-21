@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/wire"
 	"github.com/zmsocc/practice/webook/internal/repository"
+	"github.com/zmsocc/practice/webook/internal/repository/cache"
 	"github.com/zmsocc/practice/webook/internal/repository/dao"
 	"github.com/zmsocc/practice/webook/internal/service"
 	"github.com/zmsocc/practice/webook/internal/web"
@@ -20,6 +21,7 @@ func InitWebServer() *gin.Engine {
 		ioc.InitRedis,
 		// 初始化 DAO
 		dao.NewUserDAO,
+		cache.NewUserCache,
 
 		repository.NewUserRepository,
 

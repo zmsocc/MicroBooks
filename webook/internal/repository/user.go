@@ -2,7 +2,9 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"github.com/zmsocc/practice/webook/internal/domain"
+	"github.com/zmsocc/practice/webook/internal/repository/cache"
 	"github.com/zmsocc/practice/webook/internal/repository/dao"
 	"time"
 )
@@ -13,12 +15,14 @@ var (
 )
 
 type UserRepository struct {
-	dao *dao.UserDAO
+	dao   *dao.UserDAO
+	cache *cache.UserCache
 }
 
-func NewUserRepository(d *dao.UserDAO) *UserRepository {
+func NewUserRepository(d *dao.UserDAO, c *cache.UserCache) *UserRepository {
 	return &UserRepository{
-		dao: d,
+		dao:   d,
+		cache: c,
 	}
 }
 
@@ -35,6 +39,32 @@ func (r *UserRepository) FindByEmail(ctx context.Context, email string) (domain.
 		return domain.User{}, err
 	}
 	return r.entityToDomain(u), nil
+}
+
+func (r *UserRepository) FindByID(ctx context.Context, id int64) (domain.User, error) {
+	// 先从 cache 里面找, 再从 dao 里面找, 找到了回写 cache
+	u, err := r.cache.Get(ctx, id)
+	if err == nil {
+		return u, err
+	}
+	// 查看 Redis 是否限流了
+	if ctx.Value("limited") == true {
+		return domain.User{}, errors.New("触发限流，缓存未命中，不查询数据库")
+	}
+	ue, err := r.dao.FindById(ctx, id)
+	if err != nil {
+		return domain.User{}, err
+	}
+	user := domain.User{
+		Id:       ue.Id,
+		Email:    ue.Email,
+		Password: ue.Password,
+	}
+	err = r.cache.Set(ctx, user)
+	if err != nil {
+		return domain.User{}, err
+	}
+	return user, nil
 }
 
 func (r *UserRepository) domainToEntity(u domain.User) dao.User {

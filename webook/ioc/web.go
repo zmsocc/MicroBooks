@@ -33,6 +33,7 @@ func InitMiddlewares(jwtHdl ijwt.Handler, cmd redis.Cmdable) []gin.HandlerFunc {
 		middleware.NewLoginJWTMiddlewareBuilder(jwtHdl).
 			IgnorePaths("/users/signup").
 			IgnorePaths("/users/login").
+			IgnorePaths("/users/profile").
 			Build(),
 		ratelimit.NewBuilder(cmd, time.Minute, 100).Build(),
 	}

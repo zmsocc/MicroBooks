@@ -9,6 +9,7 @@ package main
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/zmsocc/practice/webook/internal/repository"
+	"github.com/zmsocc/practice/webook/internal/repository/cache"
 	"github.com/zmsocc/practice/webook/internal/repository/dao"
 	"github.com/zmsocc/practice/webook/internal/service"
 	"github.com/zmsocc/practice/webook/internal/web"
@@ -24,7 +25,8 @@ func InitWebServer() *gin.Engine {
 	v := ioc.InitMiddlewares(handler, cmdable)
 	db := ioc.InitDB()
 	userDAO := dao.NewUserDAO(db)
-	userRepository := repository.NewUserRepository(userDAO)
+	userCache := cache.NewUserCache(cmdable)
+	userRepository := repository.NewUserRepository(userDAO, userCache)
 	userService := service.NewUserService(userRepository)
 	userHandler := web.NewUserHandler(userService, handler)
 	engine := ioc.InitWebServer(v, userHandler)
