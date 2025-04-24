@@ -11,6 +11,7 @@ import (
 var (
 	ErrUserDuplicateEmail = repository.ErrUserDuplicateEmail
 	ErrInvalidUserOrEmail = errors.New("无效的邮箱或密码")
+	ErrUserNotFound       = errors.New("用户不存在")
 )
 
 type UserService struct {
@@ -53,6 +54,12 @@ func (svc *UserService) Profile(ctx context.Context, id int64) (domain.User, err
 	return svc.repo.FindByID(ctx, id)
 }
 
-//func (svc *UserService) UpdateNonsensitiveInfo(ctx context.Context, nickname string, birthday string, aboutMe string) (domain.User, error) {
-//	svc.repo.Update(ctx, nickname, birthday, aboutMe)
-//}
+func (svc *UserService) EditProfile(ctx context.Context, u domain.User) error {
+	if len(u.Nickname) > 50 {
+		return errors.New("昵称过长")
+	}
+	if len(u.AboutMe) > 1024 {
+		return errors.New("个人简介过长")
+	}
+	return svc.repo.Update(ctx, u)
+}

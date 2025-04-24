@@ -10,6 +10,7 @@ import (
 	"github.com/zmsocc/practice/webook/internal/web/ijwt"
 	"github.com/zmsocc/practice/webook/pkg/ginx"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -40,7 +41,7 @@ func (h *UserHandler) RegisterRoutes(server *gin.Engine) {
 	ug := server.Group("/users")
 	ug.POST("/signup", h.SignUp)
 	ug.POST("/login", ginx.WrapBodyV1(h.LoginJWT))
-	//ug.POST("/edit", h.Edit)
+	ug.POST("/edit", h.jwtMiddleware(), ginx.WrapBodyV1(h.EditJWT))
 	ug.GET("/profile", h.ProfileJWT)
 }
 
@@ -139,8 +140,41 @@ func (h *UserHandler) LoginJWT(ctx *gin.Context) (Result, error) {
 	return Result{Msg: "登录成功"}, nil
 }
 
+func (h *UserHandler) EditJWT(ctx *gin.Context) (Result, error) {
+	type EditJWTReq struct {
+		Nickname string `json:"nickname" binding:"max=50"`
+		Birthday string `json:"birthday" binding:"required,datetime=2006-01-02"`
+		AboutMe  string `json:"about_me" binding:"max=500"`
+	}
+	// 获取用户 Id
+	uc := ctx.MustGet("uc").(ijwt.UserClaims)
+	var req EditJWTReq
+	if err := ctx.Bind(&req); err != nil {
+		return Result{Code: 4, Msg: "参数错误"}, nil
+	}
+	// 转换生日格式
+	birthday, err := time.Parse(time.DateOnly, req.Birthday)
+	if err != nil {
+		return Result{Code: 4, Msg: "生日格式错误"}, nil
+	}
+	// 调用服务层
+	err = h.svc.EditProfile(ctx, domain.User{
+		Id:       uc.Uid,
+		Nickname: req.Nickname,
+		Birthday: birthday,
+		AboutMe:  req.AboutMe,
+	})
+	if errors.Is(err, service.ErrUserNotFound) {
+		return Result{Code: 4, Msg: "用户不存在"}, nil
+	}
+	if err != nil {
+		return Result{Code: 5, Msg: "系统错误"}, nil
+	}
+	return Result{Msg: "修改成功"}, nil
+}
+
 func (h *UserHandler) ProfileJWT(ctx *gin.Context) {
-	type ProfileReq struct {
+	type ProfileJWTReq struct {
 		Email    string `json:"email"`
 		Nickname string `json:"nickname"`
 		Birthday string `json:"birthday"`
@@ -152,11 +186,68 @@ func (h *UserHandler) ProfileJWT(ctx *gin.Context) {
 		ctx.String(http.StatusOK, "系统错误")
 		return
 	}
-	ctx.JSON(http.StatusOK, ProfileReq{
+	ctx.JSON(http.StatusOK, ProfileJWTReq{
 		Email:    u.Email,
 		Nickname: u.Nickname,
 		Birthday: u.Birthday.Format(time.DateOnly),
 		AboutMe:  u.AboutMe,
 	})
-	ctx.String(http.StatusOK, "这是你的 profile")
+}
+
+func (h *UserHandler) jwtMiddleware() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		// 1.从请求中获取 token
+		tokenStr := extractTokenFromHeader(ctx)
+		if tokenStr == "" {
+			ctx.AbortWithStatusJSON(http.StatusUnauthorized,
+				Result{Code: 4, Msg: "未提供访问令牌"})
+			return
+		}
+		// 2.验证 JWT
+		claims, err := h.userHdl.ParseToken(ctx, tokenStr)
+		if err != nil {
+			handleJWTError(ctx, err)
+			ctx.Abort()
+			return
+		}
+		// 3.检查 token 是否已过期
+		if claims.ExpiresAt != nil {
+			// 转换为 Unix 时间戳(秒级)
+			expiresAt := claims.ExpiresAt.Unix()
+			currentTime := time.Now().Unix()
+			if currentTime > expiresAt {
+				ctx.AbortWithStatusJSON(http.StatusUnauthorized, Result{Code: 4, Msg: "令牌已过期"})
+				return
+			} else {
+				ctx.AbortWithStatusJSON(http.StatusUnauthorized, Result{Code: 4, Msg: "令牌格式异常"})
+				return
+			}
+		}
+		// 4.将 claims 存入上下文
+		ctx.Set("uc", claims)
+		ctx.Next()
+	}
+}
+
+// 从 Header 中提取 token
+func extractTokenFromHeader(ctx *gin.Context) string {
+	authHeader := ctx.GetHeader("Authorization")
+	if len(authHeader) < 8 || !strings.HasPrefix(authHeader, "Bearer ") {
+		return ""
+	}
+	return authHeader[7:]
+}
+
+// 处理 JWT 验证错误
+func handleJWTError(ctx *gin.Context, err error) {
+	var result Result
+	switch {
+	case errors.Is(err, ijwt.ErrInvalidToken):
+		result = Result{Code: 4, Msg: "无效的令牌"}
+	case errors.Is(err, ijwt.ErrTokenExpired):
+		result = Result{Code: 5, Msg: "令牌已过期"}
+	default:
+		result = Result{Code: 6, Msg: "令牌验证失败"}
+	}
+	ctx.AbortWithStatusJSON(http.StatusUnauthorized, result)
 }

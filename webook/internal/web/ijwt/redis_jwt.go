@@ -1,19 +1,26 @@
 package ijwt
 
 import (
+	"crypto/ecdsa"
+	"crypto/x509"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
+	"github.com/zmsocc/practice/webook/pkg/ginx"
 	"net/http"
+	"os"
 	"time"
 )
 
+// AtKey        = []byte("95osj3fUD7fo0mlYdDbncXz4VD2igvf0")
+//RtKey        = []byte("0Pf2r0wZBpXVXlQNdpwCXN4ncnlnZSc3")
+
 var (
-	AtKey = []byte("95osj3fUD7fo0mlYdDbncXz4VD2igvf0")
-	RtKey = []byte("0Pf2r0wZBpXVXlQNdpwCXN4ncnlnZSc3")
+	atPrivateKey *ecdsa.PrivateKey
 )
 
 type RedisJWTHandler struct {
@@ -24,6 +31,14 @@ func NewRedisJWTHandler(cmd redis.Cmdable) Handler {
 	return &RedisJWTHandler{
 		cmd: cmd,
 	}
+}
+
+func init() {
+	// 加载 Access Token 密钥
+	privkey, _ := os.ReadFile("ec512-private.pem")
+	block, _ := pem.Decode(privkey)
+	key, _ := x509.ParseECPrivateKey(block.Bytes)
+	atPrivateKey = key
 }
 
 func (h *RedisJWTHandler) CheckSession(ctx *gin.Context, ssid string) error {
@@ -51,10 +66,16 @@ func (h *RedisJWTHandler) SetJWTToken(ctx *gin.Context, uid int64, ssid string) 
 		Ssid:      ssid,
 		UserAgent: ctx.Request.UserAgent(),
 	}
+	// 使用 ECDSA 密钥签名
 	token := jwt.NewWithClaims(jwt.SigningMethodES512, uc)
-	tokenStr, err := token.SignedString(AtKey)
+	// 使用正确格式的私钥
+	tokenStr, err := token.SignedString(atPrivateKey)
 	if err != nil {
-		ctx.String(http.StatusOK, "系统异常")
+		ctx.JSON(http.StatusInternalServerError, ginx.Result{
+			Code: 5,
+			Msg:  "令牌生成失败",
+			Data: err.Error(),
+		})
 		return err
 	}
 	ctx.Header("X-Jwt-Token", tokenStr)
@@ -81,12 +102,40 @@ func (h *RedisJWTHandler) SetRefreshToken(ctx *gin.Context, uid int64, ssid stri
 		UserAgent: ctx.Request.UserAgent(),
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodES512, uc)
-	tokenStr, err := token.SignedString(RtKey)
+	tokenStr, err := token.SignedString(atPrivateKey)
 	if err != nil {
 		ctx.Header("x-refresh-token", tokenStr)
 		return nil
 	}
 	return err
+}
+
+func (h *RedisJWTHandler) ParseToken(ctx *gin.Context, tokenStr string) (UserClaims, error) {
+	// 解析 JWT 令牌
+	var uc UserClaims
+	token, err := jwt.ParseWithClaims(tokenStr, &uc, h.keyFunc)
+	if err != nil {
+		return UserClaims{}, err
+	}
+	if !token.Valid {
+		return UserClaims{}, ErrInvalidToken
+	}
+	// Redis 会话校验
+	if err = h.CheckSession(ctx, uc.Ssid); err != nil {
+		return UserClaims{}, fmt.Errorf("%w: session invalid", ErrInvalidToken)
+	}
+	return uc, nil
+}
+
+// 密钥处理函数
+func (h *RedisJWTHandler) keyFunc(token *jwt.Token) (interface{}, error) {
+	switch token.Method {
+	case jwt.SigningMethodES512:
+		return atPrivateKey, nil
+	default:
+		return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+
+	}
 }
 
 type UserClaims struct {

@@ -48,7 +48,7 @@ func (l *LoginJWTMiddlewareBuilder) Build() gin.HandlerFunc {
 		tokenStr := authSegments[1]
 		uc := ijwt.UserClaims{}
 		token, err := jwt.ParseWithClaims(tokenStr, uc, func(token *jwt.Token) (interface{}, error) {
-			return ijwt.AtKey, nil
+			return []byte("95osj3fUD7fo0mlYdDbncXz4VD2igvf0"), nil
 		})
 		if err != nil {
 			// 没登录

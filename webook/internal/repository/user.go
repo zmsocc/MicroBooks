@@ -84,3 +84,9 @@ func (r *UserRepository) entityToDomain(u dao.User) domain.User {
 		Ctime:    time.UnixMilli(u.Ctime),
 	}
 }
+
+func (r *UserRepository) Update(ctx context.Context, u domain.User) error {
+	entity := r.domainToEntity(u)
+	// 只更新指定字段
+	return r.dao.Update(ctx, entity)
+}

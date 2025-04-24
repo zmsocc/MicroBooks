@@ -13,7 +13,7 @@ const onFinish = (values: any) => {
             }
             alert(res.data)
             // router.push('/articles/list')
-            router.push('/users/profile')
+            router.push('/articles/list')
         }).catch((err) => {
             alert(err);
     })
