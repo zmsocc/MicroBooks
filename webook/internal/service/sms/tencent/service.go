@@ -7,21 +7,25 @@ import (
 	sms "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/sms/v20210111"
 )
 
-type Service struct {
+type Service interface {
+	Send(ctx context.Context, tplId string, args []string, numbers ...string) error
+}
+
+type service struct {
 	client   *sms.Client
 	appId    *string
 	signName *string
 }
 
-func NewService(client *sms.Client, appId string, signName string) *Service {
-	return &Service{
+func NewService(client *sms.Client, appId string, signName string) Service {
+	return &service{
 		client:   client,
 		appId:    ekit.ToPtr[string](appId),
 		signName: ekit.ToPtr[string](signName),
 	}
 }
 
-func (s *Service) Send(ctx context.Context, tplId string, args []string, numbers ...string) error {
+func (s *service) Send(ctx context.Context, tplId string, args []string, numbers ...string) error {
 	req := sms.NewSendSmsRequest()
 	req.PhoneNumberSet = toStringPtrSlice(numbers)
 	req.SmsSdkAppId = s.appId

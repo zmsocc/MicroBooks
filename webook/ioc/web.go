@@ -34,6 +34,8 @@ func InitMiddlewares(jwtHdl ijwt.Handler, cmd redis.Cmdable) []gin.HandlerFunc {
 			IgnorePaths("/users/signup").
 			IgnorePaths("/users/login").
 			IgnorePaths("/users/profile").
+			IgnorePaths("/login_sms/code/send").
+			IgnorePaths("/login_sms").
 			Build(),
 		ratelimit.NewBuilder(cmd, time.Minute, 100).Build(),
 	}

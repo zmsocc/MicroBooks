@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"github.com/zmsocc/practice/webook/internal/domain"
 	"github.com/zmsocc/practice/webook/internal/repository/cache"
@@ -14,26 +15,30 @@ var (
 	ErrUserNotFound       = dao.ErrUserNotFound
 )
 
-type UserRepository struct {
-	dao   *dao.UserDAO
-	cache *cache.UserCache
+type UserRepository interface {
+	Create(ctx context.Context, u domain.User) error
+	FindByEmail(ctx context.Context, email string) (domain.User, error)
+	FindByID(ctx context.Context, id int64) (domain.User, error)
+	Update(ctx context.Context, u domain.User) error
 }
 
-func NewUserRepository(d *dao.UserDAO, c *cache.UserCache) *UserRepository {
-	return &UserRepository{
+type userRepository struct {
+	dao   dao.UserDAO
+	cache cache.UserCache
+}
+
+func NewUserRepository(d dao.UserDAO, c cache.UserCache) UserRepository {
+	return &userRepository{
 		dao:   d,
 		cache: c,
 	}
 }
 
-func (r *UserRepository) Create(ctx context.Context, u domain.User) error {
-	return r.dao.Insert(ctx, dao.User{
-		Email:    u.Email,
-		Password: u.Password,
-	})
+func (r *userRepository) Create(ctx context.Context, u domain.User) error {
+	return r.dao.Insert(ctx, r.domainToEntity(u))
 }
 
-func (r *UserRepository) FindByEmail(ctx context.Context, email string) (domain.User, error) {
+func (r *userRepository) FindByEmail(ctx context.Context, email string) (domain.User, error) {
 	u, err := r.dao.FindByEmail(ctx, email)
 	if err != nil {
 		return domain.User{}, err
@@ -41,7 +46,7 @@ func (r *UserRepository) FindByEmail(ctx context.Context, email string) (domain.
 	return r.entityToDomain(u), nil
 }
 
-func (r *UserRepository) FindByID(ctx context.Context, id int64) (domain.User, error) {
+func (r *userRepository) FindByID(ctx context.Context, id int64) (domain.User, error) {
 	// 先从 cache 里面找, 再从 dao 里面找, 找到了回写 cache
 	u, err := r.cache.Get(ctx, id)
 	if err == nil {
@@ -55,11 +60,7 @@ func (r *UserRepository) FindByID(ctx context.Context, id int64) (domain.User, e
 	if err != nil {
 		return domain.User{}, err
 	}
-	user := domain.User{
-		Id:       ue.Id,
-		Email:    ue.Email,
-		Password: ue.Password,
-	}
+	user := r.entityToDomain(ue)
 	err = r.cache.Set(ctx, user)
 	if err != nil {
 		return domain.User{}, err
@@ -67,26 +68,34 @@ func (r *UserRepository) FindByID(ctx context.Context, id int64) (domain.User, e
 	return user, nil
 }
 
-func (r *UserRepository) domainToEntity(u domain.User) dao.User {
+func (r *userRepository) Update(ctx context.Context, u domain.User) error {
+	entity := r.domainToEntity(u)
+	// 只更新指定字段
+	return r.dao.Update(ctx, entity)
+}
+
+func (r *userRepository) domainToEntity(u domain.User) dao.User {
 	return dao.User{
-		Id:       u.Id,
-		Email:    u.Email,
+		Id: u.Id,
+		Email: sql.NullString{
+			String: u.Email,
+			Valid:  u.Email != "",
+		},
+		Phone: sql.NullString{
+			String: u.Phone,
+			Valid:  u.Phone != "",
+		},
 		Password: u.Password,
 		Ctime:    u.Ctime.UnixMilli(),
 	}
 }
 
-func (r *UserRepository) entityToDomain(u dao.User) domain.User {
+func (r *userRepository) entityToDomain(u dao.User) domain.User {
 	return domain.User{
 		Id:       u.Id,
-		Email:    u.Email,
+		Email:    u.Email.String,
+		Phone:    u.Phone.String,
 		Password: u.Password,
 		Ctime:    time.UnixMilli(u.Ctime),
 	}
-}
-
-func (r *UserRepository) Update(ctx context.Context, u domain.User) error {
-	entity := r.domainToEntity(u)
-	// 只更新指定字段
-	return r.dao.Update(ctx, entity)
 }

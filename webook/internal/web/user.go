@@ -6,6 +6,7 @@ import (
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"github.com/zmsocc/practice/webook/internal/domain"
+	"github.com/zmsocc/practice/webook/internal/repository/cache"
 	"github.com/zmsocc/practice/webook/internal/service"
 	"github.com/zmsocc/practice/webook/internal/web/ijwt"
 	"github.com/zmsocc/practice/webook/pkg/ginx"
@@ -17,23 +18,26 @@ import (
 const (
 	emailRegexpPattern    = "^[a-zA-Z0-9_-]+@[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]+)+$"
 	passwordRegexpPattern = "^(?=.*[A-Za-z])(?=.*\\d)(?=.*[$@$!%*#?&])[A-Za-z\\d$@$!%*#?&]{8,}$" // 只能由数字组成
+	biz                   = "login"
 )
 
 // ^\d{1,9}$
 
 type UserHandler struct {
-	svc            *service.UserService
+	svc            service.UserService
 	emailRegexp    *regexp.Regexp
 	passwordRegexp *regexp.Regexp
 	userHdl        ijwt.Handler
+	codeSvc        service.CodeService
 }
 
-func NewUserHandler(svc *service.UserService, userHdl ijwt.Handler) *UserHandler {
+func NewUserHandler(svc service.UserService, userHdl ijwt.Handler, codeSvc service.CodeService) *UserHandler {
 	return &UserHandler{
 		svc:            svc,
 		emailRegexp:    regexp.MustCompile(emailRegexpPattern, regexp.None),
 		passwordRegexp: regexp.MustCompile(passwordRegexpPattern, regexp.None),
 		userHdl:        userHdl,
+		codeSvc:        codeSvc,
 	}
 }
 
@@ -43,6 +47,8 @@ func (h *UserHandler) RegisterRoutes(server *gin.Engine) {
 	ug.POST("/login", ginx.WrapBodyV1(h.LoginJWT))
 	ug.POST("/edit", h.jwtMiddleware(), ginx.WrapBodyV1(h.EditJWT))
 	ug.GET("/profile", h.ProfileJWT)
+	ug.POST("/login_sms/code/send", h.SendSMSLoginCode)
+	ug.POST("/login_sms", h.SMSLogin)
 }
 
 func (h *UserHandler) SignUp(ctx *gin.Context) {
@@ -192,6 +198,59 @@ func (h *UserHandler) ProfileJWT(ctx *gin.Context) {
 		Birthday: u.Birthday.Format(time.DateOnly),
 		AboutMe:  u.AboutMe,
 	})
+}
+
+func (h *UserHandler) SendSMSLoginCode(ctx *gin.Context) {
+	type SendSMSLoginCodeReq struct {
+		Phone string `json:"phone"`
+	}
+	var req SendSMSLoginCodeReq
+	if err := ctx.Bind(&req); err != nil {
+		ctx.JSON(http.StatusOK, Result{Code: 5, Msg: "系统错误"})
+		return
+	}
+	if req.Phone == "" {
+		ctx.JSON(http.StatusOK, Result{Code: 4, Msg: "请输入手机号码"})
+		return
+	}
+	err := h.codeSvc.Send(ctx, biz, req.Phone)
+	switch {
+	case err == nil:
+		ctx.JSON(http.StatusOK, Result{Msg: "验证码发送成功"})
+	case errors.Is(err, cache.ErrSendTooMany):
+		ctx.JSON(http.StatusOK, Result{Code: 4, Msg: "验证码发送太频繁"})
+	default:
+		ctx.JSON(http.StatusOK, Result{Code: 5, Msg: "系统错误"})
+		return
+	}
+}
+
+func (h *UserHandler) SMSLogin(ctx *gin.Context) {
+	type SMSLoginReq struct {
+		Phone string `json:"phone"`
+		Code  string `json:"code"`
+	}
+	var req SMSLoginReq
+	if err := ctx.Bind(&req); err != nil {
+		ctx.JSON(http.StatusOK, Result{Code: 5, Msg: "系统错误"})
+		return
+	}
+	if req.Code == "" {
+		ctx.JSON(http.StatusOK, Result{Code: 4, Msg: "验证码为空，请输入验证码"})
+		return
+	}
+	res, err := h.codeSvc.Verify(ctx, req.Code, biz, req.Phone)
+	switch {
+	case res == true && err == nil:
+		ctx.JSON(http.StatusOK, Result{Msg: "登陆成功"})
+	case res == false && errors.Is(err, cache.ErrCodeVerifyTooMany):
+		ctx.JSON(http.StatusOK, Result{Code: 4, Msg: "验证码验证过于频繁"})
+	case res == false && err == nil:
+		ctx.JSON(http.StatusOK, Result{Code: 3, Msg: "验证码错误"})
+	default:
+		ctx.JSON(http.StatusOK, Result{Code: 5, Msg: "系统错误"})
+		return
+	}
 }
 
 func (h *UserHandler) jwtMiddleware() gin.HandlerFunc {

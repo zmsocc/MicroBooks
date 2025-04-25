@@ -14,17 +14,24 @@ var (
 	ErrUserNotFound       = gorm.ErrRecordNotFound
 )
 
-type UserDAO struct {
+type UserDAO interface {
+	Insert(ctx context.Context, u User) error
+	FindByEmail(ctx context.Context, email string) (User, error)
+	FindById(ctx context.Context, id int64) (User, error)
+	Update(ctx context.Context, u User) error
+}
+
+type userDAO struct {
 	db *gorm.DB
 }
 
-func NewUserDAO(db *gorm.DB) *UserDAO {
-	return &UserDAO{
+func NewUserDAO(db *gorm.DB) UserDAO {
+	return &userDAO{
 		db: db,
 	}
 }
 
-func (d *UserDAO) Insert(ctx context.Context, u User) error {
+func (d *userDAO) Insert(ctx context.Context, u User) error {
 	now := time.Now().UnixMilli()
 	u.Ctime = now
 	u.Utime = now
@@ -40,19 +47,19 @@ func (d *UserDAO) Insert(ctx context.Context, u User) error {
 	return err
 }
 
-func (d *UserDAO) FindByEmail(ctx context.Context, email string) (User, error) {
+func (d *userDAO) FindByEmail(ctx context.Context, email string) (User, error) {
 	var u User
 	err := d.db.WithContext(ctx).Where("email = ?", email).First(&u).Error
 	return u, err
 }
 
-func (d *UserDAO) FindById(ctx context.Context, id int64) (User, error) {
+func (d *userDAO) FindById(ctx context.Context, id int64) (User, error) {
 	var u User
 	err := d.db.WithContext(ctx).Where("id = ?", id).First(&u).Error
 	return u, err
 }
 
-func (d *UserDAO) Update(ctx context.Context, u User) error {
+func (d *userDAO) Update(ctx context.Context, u User) error {
 	return d.db.WithContext(ctx).Model(&u).
 		Select("nickname", "birthday", "about_me", "utime").
 		Where("id = ?", u.Id).
@@ -65,9 +72,10 @@ func (d *UserDAO) Update(ctx context.Context, u User) error {
 }
 
 type User struct {
-	Id       int64  `gorm:"primaryKey;autoIncrement"`
-	Email    string `gorm:"unique"`
+	Id       int64          `gorm:"primaryKey;autoIncrement"`
+	Email    sql.NullString `gorm:"unique"`
 	Password string
+	Phone    sql.NullString
 	Birthday sql.NullInt64
 	Nickname sql.NullString
 	AboutMe  sql.NullString `gorm:"type:varchar(1024)"`

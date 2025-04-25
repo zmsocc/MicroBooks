@@ -9,23 +9,28 @@ import (
 	"time"
 )
 
-type UserCache struct {
+type UserCache interface {
+	Set(ctx context.Context, u domain.User) error
+	Get(ctx context.Context, id int64) (domain.User, error)
+}
+
+type userCache struct {
 	cmd        redis.Cmdable
 	expiration time.Duration
 }
 
-func NewUserCache(cmd redis.Cmdable) *UserCache {
-	return &UserCache{
+func NewUserCache(cmd redis.Cmdable) UserCache {
+	return &userCache{
 		cmd:        cmd,
 		expiration: time.Minute * 15,
 	}
 }
 
-func (c *UserCache) key(id int64) string {
+func (c *userCache) key(id int64) string {
 	return fmt.Sprintf("user:info:%d", id)
 }
 
-func (c *UserCache) Set(ctx context.Context, u domain.User) error {
+func (c *userCache) Set(ctx context.Context, u domain.User) error {
 	data, err := json.Marshal(u)
 	if err != nil {
 		return err
@@ -34,7 +39,7 @@ func (c *UserCache) Set(ctx context.Context, u domain.User) error {
 	return c.cmd.Set(ctx, key, data, c.expiration).Err()
 }
 
-func (c *UserCache) Get(ctx context.Context, id int64) (domain.User, error) {
+func (c *userCache) Get(ctx context.Context, id int64) (domain.User, error) {
 	key := c.key(id)
 	data, err := c.cmd.Get(ctx, key).Result()
 	if err != nil {
