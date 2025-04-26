@@ -7,39 +7,35 @@ import (
 	sms "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/sms/v20210111"
 )
 
-type Service interface {
-	Send(ctx context.Context, tplId string, args []string, numbers ...string) error
-}
-
-type service struct {
+type Service struct {
 	client   *sms.Client
 	appId    *string
 	signName *string
 }
 
-func NewService(client *sms.Client, appId string, signName string) Service {
-	return &service{
+func NewService(client *sms.Client, appId string, signName string) *Service {
+	return &Service{
 		client:   client,
 		appId:    ekit.ToPtr[string](appId),
 		signName: ekit.ToPtr[string](signName),
 	}
 }
 
-func (s *service) Send(ctx context.Context, tplId string, args []string, numbers ...string) error {
+func (s *Service) Send(ctx context.Context, biz string, args []string, numbers ...string) error {
 	req := sms.NewSendSmsRequest()
-	req.PhoneNumberSet = toStringPtrSlice(numbers)
 	req.SmsSdkAppId = s.appId
-	req.SetContext(ctx)
-	req.TemplateParamSet = toStringPtrSlice(args)
-	req.TemplateId = ekit.ToPtr[string](tplId)
 	req.SignName = s.signName
+	req.TemplateId = ekit.ToPtr[string](biz)
+	req.PhoneNumberSet = toStringPtrSlice(numbers)
+	req.TemplateParamSet = toStringPtrSlice(args)
+	//req.SetContext(ctx)
 	resp, err := s.client.SendSms(req)
 	if err != nil {
-		return err
+		return fmt.Errorf("腾讯短信服务发送失败 %w", err)
 	}
 	for _, status := range resp.Response.SendStatusSet {
 		if status.Code == nil || *(status.Code) != "Ok" {
-			return fmt.Errorf("发送失败，code: %s, 原因: %s", *(status.Code), *(status.Message))
+			return fmt.Errorf("发送失败，code: %s, 原因: %s", *status.Code, *status.Message)
 		}
 	}
 	return nil

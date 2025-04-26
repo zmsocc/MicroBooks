@@ -217,11 +217,10 @@ func (h *UserHandler) SendSMSLoginCode(ctx *gin.Context) {
 	switch {
 	case err == nil:
 		ctx.JSON(http.StatusOK, Result{Msg: "验证码发送成功"})
-	case errors.Is(err, cache.ErrSendTooMany):
-		ctx.JSON(http.StatusOK, Result{Code: 4, Msg: "验证码发送太频繁"})
+	case errors.Is(err, service.ErrCodeSendTooMany):
+		ctx.JSON(http.StatusOK, Result{Code: 4, Msg: "验证码发送太频繁, 请稍后再试"})
 	default:
-		ctx.JSON(http.StatusOK, Result{Code: 5, Msg: "系统错误"})
-		return
+		ctx.JSON(http.StatusOK, Result{Msg: "系统错误"})
 	}
 }
 
@@ -249,7 +248,6 @@ func (h *UserHandler) SMSLogin(ctx *gin.Context) {
 		ctx.JSON(http.StatusOK, Result{Code: 3, Msg: "验证码错误"})
 	default:
 		ctx.JSON(http.StatusOK, Result{Code: 5, Msg: "系统错误"})
-		return
 	}
 }
 

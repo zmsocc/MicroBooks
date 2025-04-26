@@ -30,6 +30,9 @@ func InitWebServer() *gin.Engine {
 		service.NewUserService,
 		service.NewCodeService,
 
+		// 直接基于内存实现
+		ioc.InitSMSService,
+
 		web.NewUserHandler,
 		ijwt.NewRedisJWTHandler,
 
