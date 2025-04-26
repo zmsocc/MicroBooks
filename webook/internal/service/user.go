@@ -19,10 +19,26 @@ type UserService interface {
 	Login(ctx context.Context, email, password string) (domain.User, error)
 	Profile(ctx context.Context, id int64) (domain.User, error)
 	EditProfile(ctx context.Context, u domain.User) error
+	FindOrCreate(ctx context.Context, phone string) (domain.User, error)
 }
 
 type userService struct {
 	repo repository.UserRepository
+}
+
+func (svc *userService) FindOrCreate(ctx context.Context, phone string) (domain.User, error) {
+	u, err := svc.repo.FindByPhone(ctx, phone)
+	if !errors.Is(err, repository.ErrUserNotFound) {
+		return u, err
+	}
+	u = domain.User{
+		Phone: phone,
+	}
+	err = svc.repo.Create(ctx, u)
+	if err != nil && !errors.Is(err, repository.ErrUserDuplicateEmail) {
+		return u, err
+	}
+	return svc.repo.FindByPhone(ctx, phone)
 }
 
 func NewUserService(repo repository.UserRepository) UserService {

@@ -10,8 +10,8 @@ import (
 )
 
 var (
-	ErrUserDuplicateEmail = gorm.ErrDuplicatedKey
-	ErrUserNotFound       = gorm.ErrRecordNotFound
+	ErrUserDuplicate = gorm.ErrDuplicatedKey
+	ErrUserNotFound  = gorm.ErrRecordNotFound
 )
 
 type UserDAO interface {
@@ -19,6 +19,7 @@ type UserDAO interface {
 	FindByEmail(ctx context.Context, email string) (User, error)
 	FindById(ctx context.Context, id int64) (User, error)
 	Update(ctx context.Context, u User) error
+	FindByPhone(ctx context.Context, phone string) (User, error)
 }
 
 type userDAO struct {
@@ -41,7 +42,7 @@ func (d *userDAO) Insert(ctx context.Context, u User) error {
 	if errors.As(err, &mysqlErr) {
 		const uniqueIndexErrNo uint16 = 1062
 		if mysqlErr.Number == uniqueIndexErrNo {
-			return ErrUserDuplicateEmail
+			return ErrUserDuplicate
 		}
 	}
 	return err
@@ -56,6 +57,12 @@ func (d *userDAO) FindByEmail(ctx context.Context, email string) (User, error) {
 func (d *userDAO) FindById(ctx context.Context, id int64) (User, error) {
 	var u User
 	err := d.db.WithContext(ctx).Where("id = ?", id).First(&u).Error
+	return u, err
+}
+
+func (d *userDAO) FindByPhone(ctx context.Context, phone string) (User, error) {
+	var u User
+	err := d.db.WithContext(ctx).Where("phone = ?", phone).First(&u).Error
 	return u, err
 }
 

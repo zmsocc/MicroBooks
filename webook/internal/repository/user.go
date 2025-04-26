@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	ErrUserDuplicateEmail = dao.ErrUserDuplicateEmail
+	ErrUserDuplicateEmail = dao.ErrUserDuplicate
 	ErrUserNotFound       = dao.ErrUserNotFound
 )
 
@@ -20,6 +20,7 @@ type UserRepository interface {
 	FindByEmail(ctx context.Context, email string) (domain.User, error)
 	FindByID(ctx context.Context, id int64) (domain.User, error)
 	Update(ctx context.Context, u domain.User) error
+	FindByPhone(ctx context.Context, phone string) (domain.User, error)
 }
 
 type userRepository struct {
@@ -66,6 +67,14 @@ func (r *userRepository) FindByID(ctx context.Context, id int64) (domain.User, e
 		return domain.User{}, err
 	}
 	return user, nil
+}
+
+func (r *userRepository) FindByPhone(ctx context.Context, phone string) (domain.User, error) {
+	u, err := r.dao.FindByPhone(ctx, phone)
+	if err != nil {
+		return domain.User{}, err
+	}
+	return r.entityToDomain(u), nil
 }
 
 func (r *userRepository) Update(ctx context.Context, u domain.User) error {

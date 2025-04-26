@@ -6,7 +6,6 @@ import (
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"github.com/zmsocc/practice/webook/internal/domain"
-	"github.com/zmsocc/practice/webook/internal/repository/cache"
 	"github.com/zmsocc/practice/webook/internal/service"
 	"github.com/zmsocc/practice/webook/internal/web/ijwt"
 	"github.com/zmsocc/practice/webook/pkg/ginx"
@@ -238,17 +237,31 @@ func (h *UserHandler) SMSLogin(ctx *gin.Context) {
 		ctx.JSON(http.StatusOK, Result{Code: 4, Msg: "验证码为空，请输入验证码"})
 		return
 	}
-	res, err := h.codeSvc.Verify(ctx, req.Code, biz, req.Phone)
-	switch {
-	case res == true && err == nil:
-		ctx.JSON(http.StatusOK, Result{Msg: "登陆成功"})
-	case res == false && errors.Is(err, cache.ErrCodeVerifyTooMany):
-		ctx.JSON(http.StatusOK, Result{Code: 4, Msg: "验证码验证过于频繁"})
-	case res == false && err == nil:
-		ctx.JSON(http.StatusOK, Result{Code: 3, Msg: "验证码错误"})
-	default:
-		ctx.JSON(http.StatusOK, Result{Code: 5, Msg: "系统错误"})
+	ok, err := h.codeSvc.Verify(ctx, biz, req.Phone, req.Code)
+	if errors.Is(err, service.ErrCodeVerifyTooMany) {
+		// 可能有人搞你
+		ctx.JSON(http.StatusOK, Result{Code: 6, Msg: "验证太频繁，请稍后再试"})
+		return
 	}
+	if err != nil {
+		ctx.JSON(http.StatusOK, Result{Code: 5, Msg: "系统错误"})
+		return
+	}
+	if !ok {
+		ctx.JSON(http.StatusOK, Result{Code: 4, Msg: "验证码有误"})
+		return
+	}
+	user, err := h.svc.FindOrCreate(ctx, req.Phone)
+	if err != nil {
+		ctx.JSON(http.StatusOK, Result{Code: 5, Msg: "系统错误"})
+		return
+	}
+	if err = h.userHdl.SetLoginToken(ctx, user.Id); err != nil {
+		ctx.JSON(http.StatusOK, Result{Code: 5, Msg: "系统错误"})
+		return
+	}
+	ctx.JSON(http.StatusOK, Result{Msg: "登陆成功"})
+	return
 }
 
 func (h *UserHandler) jwtMiddleware() gin.HandlerFunc {
