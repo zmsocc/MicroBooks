@@ -47,7 +47,7 @@ func (h *UserHandler) RegisterRoutes(server *gin.Engine) {
 	ug.POST("/edit", h.jwtMiddleware(), ginx.WrapBodyV1(h.EditJWT))
 	ug.GET("/profile", h.ProfileJWT)
 	ug.POST("/login_sms/code/send", h.SendSMSLoginCode)
-	ug.POST("/login_sms", h.SMSLogin)
+	ug.POST("/login_sms", ginx.WrapBodyV1(h.SMSLogin))
 }
 
 func (h *UserHandler) SignUp(ctx *gin.Context) {
@@ -223,45 +223,37 @@ func (h *UserHandler) SendSMSLoginCode(ctx *gin.Context) {
 	}
 }
 
-func (h *UserHandler) SMSLogin(ctx *gin.Context) {
+func (h *UserHandler) SMSLogin(ctx *gin.Context) (Result, error) {
 	type SMSLoginReq struct {
 		Phone string `json:"phone"`
 		Code  string `json:"code"`
 	}
 	var req SMSLoginReq
 	if err := ctx.Bind(&req); err != nil {
-		ctx.JSON(http.StatusOK, Result{Code: 5, Msg: "系统错误"})
-		return
+		return Result{Code: 5, Msg: "系统错误"}, nil
 	}
 	if req.Code == "" {
-		ctx.JSON(http.StatusOK, Result{Code: 4, Msg: "验证码为空，请输入验证码"})
-		return
+		return Result{Code: 4, Msg: "验证码为空，请输入验证码"}, nil
 	}
 	ok, err := h.codeSvc.Verify(ctx, biz, req.Phone, req.Code)
 	if errors.Is(err, service.ErrCodeVerifyTooMany) {
 		// 可能有人搞你
-		ctx.JSON(http.StatusOK, Result{Code: 6, Msg: "验证太频繁，请稍后再试"})
-		return
+		return Result{Code: 6, Msg: "验证太频繁，请稍后再试"}, nil
 	}
 	if err != nil {
-		ctx.JSON(http.StatusOK, Result{Code: 5, Msg: "系统错误"})
-		return
+		return Result{Code: 5, Msg: "系统错误"}, nil
 	}
 	if !ok {
-		ctx.JSON(http.StatusOK, Result{Code: 4, Msg: "验证码有误"})
-		return
+		return Result{Code: 4, Msg: "验证码有误"}, nil
 	}
 	user, err := h.svc.FindOrCreate(ctx, req.Phone)
 	if err != nil {
-		ctx.JSON(http.StatusOK, Result{Code: 5, Msg: "系统错误"})
-		return
+		return Result{Code: 5, Msg: "系统错误"}, nil
 	}
 	if err = h.userHdl.SetLoginToken(ctx, user.Id); err != nil {
-		ctx.JSON(http.StatusOK, Result{Code: 5, Msg: "系统错误"})
-		return
+		return Result{Code: 5, Msg: "系统错误"}, nil
 	}
-	ctx.JSON(http.StatusOK, Result{Msg: "登陆成功"})
-	return
+	return Result{Msg: "登陆成功"}, nil
 }
 
 func (h *UserHandler) jwtMiddleware() gin.HandlerFunc {
