@@ -4,7 +4,10 @@ import (
 	"context"
 	"fmt"
 	"github.com/ecodeclub/ekit"
+	"github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common"
+	"github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common/profile"
 	sms "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/sms/v20210111"
+	"os"
 )
 
 type Service struct {
@@ -19,6 +22,19 @@ func NewService(client *sms.Client, appId string, signName string) *Service {
 		appId:    ekit.ToPtr[string](appId),
 		signName: ekit.ToPtr[string](signName),
 	}
+}
+
+func InitSmsTencentService() *Service {
+	secretId, ok := os.LookupEnv("TENCENT_SECRET_ID")
+	if !ok {
+		panic("没有找到环境变量 TENCENT_SECRET_ID")
+	}
+	secretKey, ok := os.LookupEnv("TENCENT_SECRET_KEY")
+	c, err := sms.NewClient(common.NewCredential(secretId, secretKey), "ap-nanjing", profile.NewClientProfile())
+	if err != nil {
+		panic("没有找到环境变量 TENCENT_SECRET_KEY")
+	}
+	return NewService(c, "1400842696", "妙影科技")
 }
 
 func (s *Service) Send(ctx context.Context, biz string, args []string, numbers ...string) error {

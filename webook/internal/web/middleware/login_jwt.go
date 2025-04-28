@@ -6,7 +6,6 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/zmsocc/practice/webook/internal/web/ijwt"
 	"net/http"
-	"strings"
 	"time"
 )
 
@@ -36,18 +35,10 @@ func (l *LoginJWTMiddlewareBuilder) Build() gin.HandlerFunc {
 			}
 		}
 		// 用 JWT 来校验
-		authCode := ctx.GetHeader("Authorization")
-		if authCode == "" {
-			return
-		}
-		authSegments := strings.SplitN(authCode, " ", 2)
-		if len(authSegments) != 2 {
-			ctx.AbortWithStatus(http.StatusUnauthorized)
-			return
-		}
-		tokenStr := authSegments[1]
+		tokenStr := l.ExtractToken(ctx)
 		uc := ijwt.UserClaims{}
-		token, err := jwt.ParseWithClaims(tokenStr, uc, func(token *jwt.Token) (interface{}, error) {
+		// ParseWithClaims 里面一定要传入指针
+		token, err := jwt.ParseWithClaims(tokenStr, &uc, func(token *jwt.Token) (interface{}, error) {
 			return []byte("95osj3fUD7fo0mlYdDbncXz4VD2igvf0"), nil
 		})
 		if err != nil {

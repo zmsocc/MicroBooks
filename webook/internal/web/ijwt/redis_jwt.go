@@ -13,6 +13,7 @@ import (
 	"github.com/zmsocc/practice/webook/pkg/ginx"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -20,16 +21,19 @@ import (
 //RtKey        = []byte("0Pf2r0wZBpXVXlQNdpwCXN4ncnlnZSc3")
 
 var (
-	atPrivateKey *ecdsa.PrivateKey
+	AtPrivateKey *ecdsa.PrivateKey
 )
 
 type RedisJWTHandler struct {
 	cmd redis.Cmdable
+	// 长 token 的过期时间
+	rtExpiration time.Duration
 }
 
 func NewRedisJWTHandler(cmd redis.Cmdable) Handler {
 	return &RedisJWTHandler{
-		cmd: cmd,
+		cmd:          cmd,
+		rtExpiration: time.Hour * 24 * 7,
 	}
 }
 
@@ -38,7 +42,7 @@ func init() {
 	privkey, _ := os.ReadFile("ec512-private.pem")
 	block, _ := pem.Decode(privkey)
 	key, _ := x509.ParseECPrivateKey(block.Bytes)
-	atPrivateKey = key
+	AtPrivateKey = key
 }
 
 func (h *RedisJWTHandler) CheckSession(ctx *gin.Context, ssid string) error {
@@ -56,6 +60,23 @@ func (h *RedisJWTHandler) CheckSession(ctx *gin.Context, ssid string) error {
 	}
 }
 
+func (h *RedisJWTHandler) ClearToken(ctx *gin.Context) error {
+	ctx.Header("X-Jwt-Token", "")
+	ctx.Header("x-refresh-token", "")
+	claims := ctx.MustGet("uc").(*UserClaims)
+	return h.cmd.Set(ctx, fmt.Sprintf("users:ssid:%s", claims.Ssid),
+		"", time.Hour*7*24).Err()
+}
+
+func (h *RedisJWTHandler) ExtractToken(ctx *gin.Context) string {
+	tokenHeader := ctx.GetHeader("Authorization")
+	segs := strings.Split(tokenHeader, " ")
+	if len(segs) != 2 {
+		return ""
+	}
+	return segs[1]
+}
+
 func (h *RedisJWTHandler) SetJWTToken(ctx *gin.Context, uid int64, ssid string) error {
 	uc := UserClaims{
 		RegisteredClaims: jwt.RegisteredClaims{
@@ -69,7 +90,7 @@ func (h *RedisJWTHandler) SetJWTToken(ctx *gin.Context, uid int64, ssid string) 
 	// 使用 ECDSA 密钥签名
 	token := jwt.NewWithClaims(jwt.SigningMethodES512, uc)
 	// 使用正确格式的私钥
-	tokenStr, err := token.SignedString(atPrivateKey)
+	tokenStr, err := token.SignedString(AtPrivateKey)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, ginx.Result{
 			Code: 5,
@@ -93,21 +114,20 @@ func (h *RedisJWTHandler) SetLoginToken(ctx *gin.Context, uid int64) error {
 }
 
 func (h *RedisJWTHandler) SetRefreshToken(ctx *gin.Context, uid int64, ssid string) error {
-	uc := UserClaims{
+	uc := RefreshClaims{
+		Uid:  uid,
+		Ssid: ssid,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(h.rtExpiration)),
 		},
-		Uid:       uid,
-		Ssid:      ssid,
-		UserAgent: ctx.Request.UserAgent(),
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodES512, uc)
-	tokenStr, err := token.SignedString(atPrivateKey)
+	tokenStr, err := token.SignedString(AtPrivateKey)
 	if err != nil {
-		ctx.Header("x-refresh-token", tokenStr)
-		return nil
+		return err
 	}
-	return err
+	ctx.Header("x-refresh-token", tokenStr)
+	return nil
 }
 
 func (h *RedisJWTHandler) ParseToken(ctx *gin.Context, tokenStr string) (UserClaims, error) {
@@ -131,16 +151,9 @@ func (h *RedisJWTHandler) ParseToken(ctx *gin.Context, tokenStr string) (UserCla
 func (h *RedisJWTHandler) keyFunc(token *jwt.Token) (interface{}, error) {
 	switch token.Method {
 	case jwt.SigningMethodES512:
-		return atPrivateKey, nil
+		return AtPrivateKey, nil
 	default:
 		return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 
 	}
-}
-
-type UserClaims struct {
-	jwt.RegisteredClaims
-	Uid       int64
-	Ssid      string
-	UserAgent string
 }

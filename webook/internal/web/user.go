@@ -5,6 +5,7 @@ import (
 	regexp "github.com/dlclark/regexp2"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/zmsocc/practice/webook/internal/domain"
 	"github.com/zmsocc/practice/webook/internal/service"
 	"github.com/zmsocc/practice/webook/internal/web/ijwt"
@@ -21,6 +22,10 @@ const (
 )
 
 // ^\d{1,9}$
+
+var (
+	AtPrivateKey = ijwt.AtPrivateKey
+)
 
 type UserHandler struct {
 	svc            service.UserService
@@ -44,10 +49,12 @@ func (h *UserHandler) RegisterRoutes(server *gin.Engine) {
 	ug := server.Group("/users")
 	ug.POST("/signup", h.SignUp)
 	ug.POST("/login", ginx.WrapBodyV1(h.LoginJWT))
+	ug.POST("/logout", h.Logout)
 	ug.POST("/edit", h.jwtMiddleware(), ginx.WrapBodyV1(h.EditJWT))
 	ug.GET("/profile", h.ProfileJWT)
 	ug.POST("/login_sms/code/send", h.SendSMSLoginCode)
 	ug.POST("/login_sms", ginx.WrapBodyV1(h.SMSLogin))
+	ug.POST("/refresh_token", h.RefreshToken)
 }
 
 func (h *UserHandler) SignUp(ctx *gin.Context) {
@@ -145,11 +152,20 @@ func (h *UserHandler) LoginJWT(ctx *gin.Context) (Result, error) {
 	return Result{Msg: "登录成功"}, nil
 }
 
+func (h *UserHandler) Logout(ctx *gin.Context) {
+	sess := sessions.Default(ctx)
+	sess.Options(sessions.Options{
+		MaxAge: -1,
+	})
+	sess.Save()
+	ctx.JSON(http.StatusOK, Result{Msg: "退出登录成功"})
+}
+
 func (h *UserHandler) EditJWT(ctx *gin.Context) (Result, error) {
 	type EditJWTReq struct {
 		Nickname string `json:"nickname" binding:"max=50"`
 		Birthday string `json:"birthday" binding:"required,datetime=2006-01-02"`
-		AboutMe  string `json:"about_me" binding:"max=500"`
+		AboutMe  string `json:"about_me" binding:"max=1024"`
 	}
 	// 获取用户 Id
 	uc := ctx.MustGet("uc").(ijwt.UserClaims)
@@ -254,6 +270,32 @@ func (h *UserHandler) SMSLogin(ctx *gin.Context) (Result, error) {
 		return Result{Code: 5, Msg: "系统错误"}, nil
 	}
 	return Result{Msg: "登陆成功"}, nil
+}
+
+// RefreshToken 可以同时刷新长短 token，用 redis 来记录是否有效，即 refresh_token 是一次性的
+func (h *UserHandler) RefreshToken(ctx *gin.Context) {
+	// 只有这个接口，拿出来的才是 refresh_token，其它地方都是 access_token
+	tokenStr := h.userHdl.ExtractToken(ctx)
+	var rc ijwt.RefreshClaims
+	token, err := jwt.ParseWithClaims(tokenStr, &rc, func(token *jwt.Token) (interface{}, error) {
+		return AtPrivateKey, nil
+	})
+	if err != nil || !token.Valid {
+		ctx.AbortWithStatus(http.StatusUnauthorized)
+		return
+	}
+	err = h.userHdl.CheckSession(ctx, rc.Ssid)
+	if err != nil {
+		ctx.AbortWithStatus(http.StatusUnauthorized)
+		return
+	}
+	// 搞个新的 access_token
+	err = h.userHdl.SetJWTToken(ctx, rc.Uid, rc.Ssid)
+	if err != nil {
+		ctx.AbortWithStatus(http.StatusUnauthorized)
+		return
+	}
+	ctx.JSON(http.StatusOK, Result{Msg: "刷新成功"})
 }
 
 func (h *UserHandler) jwtMiddleware() gin.HandlerFunc {
