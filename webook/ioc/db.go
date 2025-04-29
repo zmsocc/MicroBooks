@@ -1,23 +1,25 @@
 package ioc
 
 import (
+	"fmt"
+	"github.com/spf13/viper"
 	"github.com/zmsocc/practice/webook/internal/repository/dao"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
 
 func InitDB() *gorm.DB {
-	var cfg = WebookConfig{
-		DB: DBConfig{
-			DSN: "root:root@tcp(localhost:13336)/webook",
-		},
-		Redis: RedisConfig{
-			Addr:     "localhost:6379",
-			Password: "",
-			DB:       1,
-		},
+	type DBConfig struct {
+		DSN string `yaml:"dsn"`
 	}
-	db, err := gorm.Open(mysql.Open(cfg.DB.DSN))
+	var cfg = DBConfig{
+		DSN: "root:root@tcp(localhost:13336)/webook",
+	}
+	err := viper.UnmarshalKey("db", &cfg)
+	if err != nil {
+		panic(fmt.Errorf("初始化配置失败: %s", err))
+	}
+	db, err := gorm.Open(mysql.Open(cfg.DSN))
 	if err != nil {
 		panic(err)
 	}
@@ -26,19 +28,4 @@ func InitDB() *gorm.DB {
 		panic(err)
 	}
 	return db
-}
-
-type DBConfig struct {
-	DSN string `json:"dsn"`
-}
-
-type RedisConfig struct {
-	Addr     string `json:"addr"`
-	Password string `json:"password"`
-	DB       int    `json:"db"`
-}
-
-type WebookConfig struct {
-	DB    DBConfig
-	Redis RedisConfig
 }
