@@ -3,7 +3,7 @@ package service
 import (
 	"context"
 	"github.com/zmsocc/practice/webook/internal/domain"
-	"github.com/zmsocc/practice/webook/internal/repository"
+	"github.com/zmsocc/practice/webook/internal/repository/articles"
 )
 
 type ArticleService interface {
@@ -11,10 +11,10 @@ type ArticleService interface {
 }
 
 type articleService struct {
-	repo repository.ArticleRepository
+	repo articles.ArticleRepository
 }
 
-func NewArticleService(repo repository.ArticleRepository) ArticleService {
+func NewArticleService(repo articles.ArticleRepository) ArticleService {
 	return &articleService{
 		repo: repo,
 	}

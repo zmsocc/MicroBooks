@@ -6,8 +6,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/wire"
 	"github.com/zmsocc/practice/webook/internal/repository"
+	articles2 "github.com/zmsocc/practice/webook/internal/repository/articles"
 	"github.com/zmsocc/practice/webook/internal/repository/cache"
 	"github.com/zmsocc/practice/webook/internal/repository/dao"
+	"github.com/zmsocc/practice/webook/internal/repository/dao/articles"
 	"github.com/zmsocc/practice/webook/internal/service"
 	"github.com/zmsocc/practice/webook/internal/web"
 	"github.com/zmsocc/practice/webook/internal/web/ijwt"
@@ -23,18 +25,22 @@ func InitWebServer() *gin.Engine {
 		dao.NewUserDAO,
 		cache.NewUserCache,
 		cache.NewCodeCache,
+		articles.NewArticleDao,
 
 		repository.NewUserRepository,
 		repository.NewCodeRepository,
+		articles2.NewArticleRepository,
 
 		service.NewUserService,
 		service.NewCodeService,
+		service.NewArticleService,
 
 		// 直接基于内存实现
 		ioc.InitSMSService,
 
 		web.NewUserHandler,
 		ijwt.NewRedisJWTHandler,
+		web.NewArticleHandler,
 
 		ioc.InitWebServer,
 		ioc.InitMiddlewares,

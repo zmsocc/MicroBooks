@@ -40,9 +40,11 @@ func InitMiddlewares(jwtHdl ijwt.Handler, cmd redis.Cmdable) []gin.HandlerFunc {
 	}
 }
 
-func InitWebServer(mdls []gin.HandlerFunc, userHdl *web.UserHandler) *gin.Engine {
+func InitWebServer(mdls []gin.HandlerFunc, userHdl *web.UserHandler,
+	articleHdl *web.ArticleHandler) *gin.Engine {
 	server := gin.Default()
 	server.Use(mdls...)
 	userHdl.RegisterRoutes(server)
+	articleHdl.RegisterRoutes(server)
 	return server
 }
