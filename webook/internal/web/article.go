@@ -11,8 +11,10 @@ type ArticleHandler struct {
 	svc service.ArticleService
 }
 
-func NewArticleHandler() *ArticleHandler {
-	return &ArticleHandler{}
+func NewArticleHandler(svc service.ArticleService) *ArticleHandler {
+	return &ArticleHandler{
+		svc: svc,
+	}
 }
 
 func (h *ArticleHandler) RegisterRoutes(server *gin.Engine) {
@@ -45,4 +47,15 @@ func (h *ArticleHandler) Publish(ctx *gin.Context) {
 		ctx.JSON(http.StatusOK, Result{Code: 5, Msg: "系统错误"})
 		return
 	}
+	claims, ok := ctx.MustGet("uc").(*ijwt.UserClaims)
+	if !ok {
+		ctx.JSON(http.StatusOK, Result{Code: 5, Msg: "系统错误"})
+		return
+	}
+	id, err := h.svc.Publish(ctx, req.toDomain(claims.Uid))
+	if err != nil {
+		ctx.JSON(http.StatusOK, Result{Code: 5, Msg: "系统错误"})
+		return
+	}
+	ctx.JSON(http.StatusOK, Result{Data: id})
 }

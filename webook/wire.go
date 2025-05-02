@@ -23,9 +23,10 @@ func InitWebServer() *gin.Engine {
 		ioc.InitRedis,
 		// 初始化 DAO
 		dao.NewUserDAO,
+		articles.NewArticleDao,
+
 		cache.NewUserCache,
 		cache.NewCodeCache,
-		articles.NewArticleDao,
 
 		repository.NewUserRepository,
 		repository.NewCodeRepository,
@@ -39,8 +40,8 @@ func InitWebServer() *gin.Engine {
 		ioc.InitSMSService,
 
 		web.NewUserHandler,
-		ijwt.NewRedisJWTHandler,
 		web.NewArticleHandler,
+		ijwt.NewRedisJWTHandler,
 
 		ioc.InitWebServer,
 		ioc.InitMiddlewares,

@@ -10,6 +10,7 @@ import (
 type ArticleRepository interface {
 	Create(ctx context.Context, art domain.Article) (int64, error)
 	Update(ctx context.Context, art domain.Article) error
+	Sync(ctx context.Context, art domain.Article) (int64, error)
 }
 
 type articleRepository struct {
@@ -40,6 +41,11 @@ func (ar *articleRepository) Update(ctx context.Context, art domain.Article) err
 		AuthorId: art.Author.Id,
 		Status:   art.Status.ToUint8(),
 	})
+}
+
+func (ar *articleRepository) Sync(ctx context.Context, art domain.Article) (int64, error) {
+	id, err := ar.dao.Sync(ctx, ar.toEntity(art))
+	return id, err
 }
 
 func (ar *articleRepository) toEntity(art domain.Article) articles.Article {

@@ -9,8 +9,10 @@ package main
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/zmsocc/practice/webook/internal/repository"
+	articles2 "github.com/zmsocc/practice/webook/internal/repository/articles"
 	"github.com/zmsocc/practice/webook/internal/repository/cache"
 	"github.com/zmsocc/practice/webook/internal/repository/dao"
+	"github.com/zmsocc/practice/webook/internal/repository/dao/articles"
 	"github.com/zmsocc/practice/webook/internal/service"
 	"github.com/zmsocc/practice/webook/internal/web"
 	"github.com/zmsocc/practice/webook/internal/web/ijwt"
@@ -33,6 +35,10 @@ func InitWebServer() *gin.Engine {
 	smsService := ioc.InitSMSService(cmdable)
 	codeService := service.NewCodeService(codeRepository, smsService)
 	userHandler := web.NewUserHandler(userService, handler, codeService)
-	engine := ioc.InitWebServer(v, userHandler)
+	articleDAO := articles.NewArticleDao(db)
+	articleRepository := articles2.NewArticleRepository(articleDAO)
+	articleService := service.NewArticleService(articleRepository)
+	articleHandler := web.NewArticleHandler(articleService)
+	engine := ioc.InitWebServer(v, userHandler, articleHandler)
 	return engine
 }
