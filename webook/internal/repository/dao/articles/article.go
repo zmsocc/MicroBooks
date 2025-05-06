@@ -87,3 +87,39 @@ func (d *articleDao) Sync(ctx context.Context, art Article) (int64, error) {
 	tx.Commit()
 	return id, tx.Commit().Error
 }
+
+func (d *articleDao) SyncStatus(ctx context.Context, id, author int64, status uint8) error {
+	return d.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		res := tx.Model(&Article{}).
+			Where("id = ? AND author_id = ?", id, author).
+			Update("status", status)
+		if res.Error != nil {
+			return res.Error
+		}
+		if res.RowsAffected != 1 {
+			return ErrPossibleIncorrectAuthor
+		}
+
+		res = tx.Model(&PublishedArticle{}).
+			Where("id = ? AND author_id = ?", id, author).
+			Update("status", status)
+		if res.Error != nil {
+			return res.Error
+		}
+		if res.RowsAffected != 1 {
+			return ErrPossibleIncorrectAuthor
+		}
+		return nil
+	})
+}
+
+func (d *articleDao) FindByAuthor(ctx context.Context, uid int64, offset, limit int) ([]Article, error) {
+	var arts []Article
+	err := d.db.WithContext(ctx).Model(&Article{}).
+		Where("author_id = ?", uid).
+		Offset(offset).
+		Limit(limit).
+		Order("utime DESC").
+		Find(&arts).Error
+	return arts, err
+}

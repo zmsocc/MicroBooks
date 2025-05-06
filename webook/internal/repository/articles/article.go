@@ -3,6 +3,7 @@ package articles
 import (
 	"context"
 	"github.com/zmsocc/practice/webook/internal/domain"
+	"github.com/zmsocc/practice/webook/internal/repository/cache"
 	"github.com/zmsocc/practice/webook/internal/repository/dao/articles"
 	"time"
 )
@@ -11,10 +12,13 @@ type ArticleRepository interface {
 	Create(ctx context.Context, art domain.Article) (int64, error)
 	Update(ctx context.Context, art domain.Article) error
 	Sync(ctx context.Context, art domain.Article) (int64, error)
+	SyncStatus(ctx context.Context, id, author int64, status domain.ArticleStatus) error
+	GetByAuthor(ctx context.Context, uid int64, offset, limit int) ([]domain.Article, error)
 }
 
 type articleRepository struct {
-	dao articles.ArticleDAO
+	dao   articles.ArticleDAO
+	cache cache.ArticleCache
 }
 
 func NewArticleRepository(dao articles.ArticleDAO) ArticleRepository {
@@ -46,6 +50,14 @@ func (ar *articleRepository) Update(ctx context.Context, art domain.Article) err
 func (ar *articleRepository) Sync(ctx context.Context, art domain.Article) (int64, error) {
 	id, err := ar.dao.Sync(ctx, ar.toEntity(art))
 	return id, err
+}
+
+func (ar *articleRepository) SyncStatus(ctx context.Context, id, author int64, status domain.ArticleStatus) error {
+	return ar.dao.SyncStatus(ctx, id, author, status.ToUint8())
+}
+
+func (ar *articleRepository) GetByAuthor(ctx context.Context, uid int64, offset, limit int) ([]domain.Article, error) {
+	panic("implement me")
 }
 
 func (ar *articleRepository) toEntity(art domain.Article) articles.Article {

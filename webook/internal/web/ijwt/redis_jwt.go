@@ -37,12 +37,21 @@ func NewRedisJWTHandler(cmd redis.Cmdable) Handler {
 	}
 }
 
-func init() {
-	// 加载 Access Token 密钥
-	privkey, _ := os.ReadFile("ec512-private.pem")
-	block, _ := pem.Decode(privkey)
-	key, _ := x509.ParseECPrivateKey(block.Bytes)
+func InitPrivateKey() error {
+	privKey, err := os.ReadFile("D:/project-go/practice/ec512-private.pem")
+	if err != nil {
+		return fmt.Errorf("读取私钥文件失败: %w", err)
+	}
+	block, _ := pem.Decode(privKey)
+	if block == nil {
+		return errors.New("PEM 格式解析失败")
+	}
+	key, err := x509.ParseECPrivateKey(block.Bytes)
+	if err != nil {
+		return fmt.Errorf("解析 ECDSA 私钥失败: %w", err)
+	}
 	AtPrivateKey = key
+	return nil
 }
 
 func (h *RedisJWTHandler) CheckSession(ctx *gin.Context, ssid string) error {
@@ -63,7 +72,7 @@ func (h *RedisJWTHandler) CheckSession(ctx *gin.Context, ssid string) error {
 func (h *RedisJWTHandler) ClearToken(ctx *gin.Context) error {
 	ctx.Header("X-Jwt-Token", "")
 	ctx.Header("x-refresh-token", "")
-	claims := ctx.MustGet("uc").(*UserClaims)
+	claims := ctx.MustGet("users").(*UserClaims)
 	return h.cmd.Set(ctx, fmt.Sprintf("users:ssid:%s", claims.Ssid),
 		"", time.Hour*7*24).Err()
 }

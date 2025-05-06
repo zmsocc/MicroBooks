@@ -168,7 +168,7 @@ func (h *UserHandler) EditJWT(ctx *gin.Context) (Result, error) {
 		AboutMe  string `json:"about_me" binding:"max=1024"`
 	}
 	// 获取用户 Id
-	uc := ctx.MustGet("uc").(ijwt.UserClaims)
+	uc := ctx.MustGet("users").(ijwt.UserClaims)
 	var req EditJWTReq
 	if err := ctx.Bind(&req); err != nil {
 		return Result{Code: 4, Msg: "参数错误"}, nil
@@ -201,7 +201,7 @@ func (h *UserHandler) ProfileJWT(ctx *gin.Context) {
 		Birthday string `json:"birthday"`
 		AboutMe  string `json:"about_me"`
 	}
-	uc := ctx.MustGet("uc").(ijwt.UserClaims)
+	uc := ctx.MustGet("users").(ijwt.UserClaims)
 	u, err := h.svc.Profile(ctx, uc.Uid)
 	if err != nil {
 		ctx.String(http.StatusOK, "系统错误")
@@ -328,7 +328,7 @@ func (h *UserHandler) jwtMiddleware() gin.HandlerFunc {
 			}
 		}
 		// 4.将 claims 存入上下文
-		ctx.Set("uc", claims)
+		ctx.Set("users", claims)
 		ctx.Next()
 	}
 }

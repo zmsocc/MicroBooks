@@ -34,3 +34,11 @@ const (
 func (s ArticleStatus) ToUint8() uint8 {
 	return uint8(s)
 }
+
+func (a Article) Abstract() string {
+	cs := []rune(a.Content)
+	if len(cs) < 100 {
+		return a.Content
+	}
+	return string(cs[:100])
+}
