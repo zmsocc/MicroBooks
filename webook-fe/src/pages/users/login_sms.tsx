@@ -12,7 +12,7 @@ const onFinish = (values: any) => {
             }
 
             if (res.data.code == 0) {
-                router.push('/users/profile')
+                router.push('/articles/list')
                 return;
             }
             alert(res.data.msg)

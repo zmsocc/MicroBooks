@@ -12,7 +12,7 @@ type Result struct {
 	Data any    `json:"data"`
 }
 
-func WrapBodyV1(fn func(ctx *gin.Context) (Result, error)) gin.HandlerFunc {
+func WrapBody(fn func(ctx *gin.Context) (Result, error)) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		// 要读取 HTTP HEADER
 		res, err := fn(ctx)

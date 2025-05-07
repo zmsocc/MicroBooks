@@ -123,3 +123,15 @@ func (d *articleDao) FindByAuthor(ctx context.Context, uid int64, offset, limit 
 		Find(&arts).Error
 	return arts, err
 }
+
+func (d *articleDao) GetById(ctx context.Context, id int64) (Article, error) {
+	var art Article
+	err := d.db.WithContext(ctx).Where("id = ?", id).First(&art).Error
+	return art, err
+}
+
+func (d *articleDao) GetPubById(ctx context.Context, id int64) (Article, error) {
+	var art Article
+	err := d.db.WithContext(ctx).Where("id = ?", id).First(&art).Error
+	return art, err
+}

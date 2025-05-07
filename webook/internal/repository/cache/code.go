@@ -21,8 +21,8 @@ var luaSetCode string
 var luaVerifyCode string
 
 type CodeCache interface {
-	Set(ctx context.Context, biz, phone, code string) error
 	Get(ctx context.Context, biz, phone, inputCode string) (bool, error)
+	Set(ctx context.Context, biz, phone, code string) error
 }
 
 type RedisCodeCache struct {
@@ -38,24 +38,6 @@ type RedisCodeCache struct {
 func NewCodeCache(cmd redis.Cmdable) CodeCache {
 	return &RedisCodeCache{
 		cmd: cmd,
-	}
-}
-
-func (c *RedisCodeCache) Set(ctx context.Context, biz, phone, code string) error {
-	// 确保 code 是字符串类型
-	// log.Printf("传递参数类型：code=%T", code)
-	res, err := c.cmd.Eval(ctx, luaSetCode, []string{c.key(biz, phone)}, code).Int()
-	if err != nil {
-		return err
-	}
-	switch res {
-	case 0:
-		// 毫无问题
-		return nil
-	case -1:
-		return ErrCodeSendTooMany
-	default:
-		return errors.New("系统错误")
 	}
 }
 
@@ -75,6 +57,24 @@ func (c *RedisCodeCache) Get(ctx context.Context, biz, phone, inputCode string) 
 		return false, nil
 	default:
 		return false, ErrUnknownForCode
+	}
+}
+
+func (c *RedisCodeCache) Set(ctx context.Context, biz, phone, code string) error {
+	// 确保 code 是字符串类型
+	// log.Printf("传递参数类型：code=%T", code)
+	res, err := c.cmd.Eval(ctx, luaSetCode, []string{c.key(biz, phone)}, code).Int()
+	if err != nil {
+		return err
+	}
+	switch res {
+	case 0:
+		// 毫无问题
+		return nil
+	case -1:
+		return ErrCodeSendTooMany
+	default:
+		return errors.New("系统错误")
 	}
 }
 

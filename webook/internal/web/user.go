@@ -48,12 +48,12 @@ func NewUserHandler(svc service.UserService, userHdl ijwt.Handler, codeSvc servi
 func (h *UserHandler) RegisterRoutes(server *gin.Engine) {
 	ug := server.Group("/users")
 	ug.POST("/signup", h.SignUp)
-	ug.POST("/login", ginx.WrapBodyV1(h.LoginJWT))
+	ug.POST("/login", ginx.WrapBody(h.LoginJWT))
 	ug.POST("/logout", h.Logout)
-	ug.POST("/edit", h.jwtMiddleware(), ginx.WrapBodyV1(h.EditJWT))
+	ug.POST("/edit", h.jwtMiddleware(), ginx.WrapBody(h.EditJWT))
 	ug.GET("/profile", h.ProfileJWT)
 	ug.POST("/login_sms/code/send", h.SendSMSLoginCode)
-	ug.POST("/login_sms", ginx.WrapBodyV1(h.SMSLogin))
+	ug.POST("/login_sms", ginx.WrapBody(h.SMSLogin))
 	ug.POST("/refresh_token", h.RefreshToken)
 }
 

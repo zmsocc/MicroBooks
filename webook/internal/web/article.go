@@ -1,23 +1,28 @@
 package web
 
 import (
+	"fmt"
 	"github.com/ecodeclub/ekit/slice"
 	"github.com/gin-gonic/gin"
 	"github.com/zmsocc/practice/webook/internal/domain"
 	"github.com/zmsocc/practice/webook/internal/service"
 	"github.com/zmsocc/practice/webook/internal/web/ijwt"
 	"github.com/zmsocc/practice/webook/pkg/ginx"
+	"github.com/zmsocc/practice/webook/pkg/logger"
 	"net/http"
+	"strconv"
 	"time"
 )
 
 type ArticleHandler struct {
 	svc service.ArticleService
+	l   logger.Logger
 }
 
-func NewArticleHandler(svc service.ArticleService) *ArticleHandler {
+func NewArticleHandler(svc service.ArticleService, l logger.Logger) *ArticleHandler {
 	return &ArticleHandler{
 		svc: svc,
+		l:   l,
 	}
 }
 
@@ -26,8 +31,11 @@ func (h *ArticleHandler) RegisterRoutes(server *gin.Engine) {
 	ag.POST("/edit", h.Edit)
 	ag.POST("/publish", h.Publish)
 	ag.POST("/withdraw", h.Withdraw)
-	ag.GET("/detail/:id", h.Detail)
-	ag.POST("/list", ginx.WrapBodyV1(h.List))
+	ag.GET("/detail/:id", ginx.WrapBody(h.Detail))
+	ag.POST("/list", ginx.WrapBody(h.List))
+
+	pub := server.Group("/pub")
+	pub.GET("/:id", h.PubDetail)
 }
 
 func (h *ArticleHandler) Edit(ctx *gin.Context) {
@@ -76,17 +84,43 @@ func (h *ArticleHandler) Withdraw(ctx *gin.Context) {
 	claims, ok := ctx.MustGet("users").(*ijwt.UserClaims)
 	if !ok {
 		ctx.JSON(http.StatusOK, Result{Code: 5, Msg: "系统错误"})
+		h.l.Error("未发现用户的 session 信息")
 		return
 	}
 	err := h.svc.Withdraw(ctx, req.toDomain(claims.Uid))
 	if err != nil {
 		ctx.JSON(http.StatusOK, Result{Code: 5, Msg: "系统错误"})
+		h.l.Error("保存帖子失败", logger.Error(err))
+		return
 	}
 	ctx.JSON(http.StatusOK, Result{Msg: "成功设置为仅自己可见"})
 }
 
-func (h *ArticleHandler) Detail(ctx *gin.Context) {
-
+func (h *ArticleHandler) Detail(ctx *gin.Context) (Result, error) {
+	var uc ijwt.UserClaims
+	idStr := ctx.Param("id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		return Result{Code: 4, Msg: "参数错误"}, nil
+	}
+	data, err := h.svc.GetById(ctx, id)
+	if err != nil {
+		return Result{Code: 5, Msg: "系统错误"}, nil
+	}
+	if data.Author.Id != uc.Uid {
+		return Result{Code: 4, Msg: "输入有误"},
+			fmt.Errorf("非法访问文章，创作者 ID 不匹配 %d", uc.Uid)
+	}
+	return Result{
+		Data: ArticleVO{
+			Id:      data.Id,
+			Title:   data.Title,
+			Content: data.Content,
+			Status:  data.Status.ToUint8(),
+			Ctime:   data.Ctime.Format(time.DateTime),
+			Utime:   data.Utime.Format(time.DateTime),
+		},
+	}, nil
 }
 
 func (h *ArticleHandler) List(ctx *gin.Context) (Result, error) {
@@ -114,4 +148,31 @@ func (h *ArticleHandler) List(ctx *gin.Context) (Result, error) {
 			}
 		}),
 	}, nil
+}
+
+func (h *ArticleHandler) PubDetail(ctx *gin.Context) {
+	idStr := ctx.Param("id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		ctx.JSON(http.StatusOK, Result{Code: 4, Msg: "参数错误"})
+		h.l.Error("前端输入的 ID 不对", logger.Error(err))
+		return
+	}
+	art, err := h.svc.GetPubById(ctx, id)
+	if err != nil {
+		ctx.JSON(http.StatusOK, Result{Code: 5, Msg: "系统错误"})
+		h.l.Error("获得文章信息失败", logger.Error(err))
+		return
+	}
+	ctx.JSON(http.StatusOK, Result{
+		Data: ArticleVO{
+			Id:      art.Id,
+			Title:   art.Title,
+			Content: art.Content,
+			Status:  art.Status.ToUint8(),
+			Author:  art.Author.Name,
+			Ctime:   art.Ctime.Format(time.DateTime),
+			Utime:   art.Utime.Format(time.DateTime),
+		},
+	})
 }
