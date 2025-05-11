@@ -9,20 +9,26 @@ import (
 	"github.com/zmsocc/practice/webook/internal/web/ijwt"
 	"github.com/zmsocc/practice/webook/pkg/ginx"
 	"github.com/zmsocc/practice/webook/pkg/logger"
+	"golang.org/x/sync/errgroup"
 	"net/http"
 	"strconv"
 	"time"
 )
 
 type ArticleHandler struct {
-	svc service.ArticleService
-	l   logger.Logger
+	svc     service.ArticleService
+	l       logger.Logger
+	intrSvc service.InteractiveService
+	biz     string
 }
 
-func NewArticleHandler(svc service.ArticleService, l logger.Logger) *ArticleHandler {
+func NewArticleHandler(svc service.ArticleService, l logger.Logger,
+	intrSvc service.InteractiveService) *ArticleHandler {
 	return &ArticleHandler{
-		svc: svc,
-		l:   l,
+		svc:     svc,
+		l:       l,
+		intrSvc: intrSvc,
+		biz:     "article",
 	}
 }
 
@@ -36,6 +42,7 @@ func (h *ArticleHandler) RegisterRoutes(server *gin.Engine) {
 
 	pub := server.Group("/pub")
 	pub.GET("/:id", h.PubDetail)
+	pub.POST("/like", ginx.WrapBody(h.Like))
 }
 
 func (h *ArticleHandler) Edit(ctx *gin.Context) {
@@ -158,12 +165,24 @@ func (h *ArticleHandler) PubDetail(ctx *gin.Context) {
 		h.l.Error("前端输入的 ID 不对", logger.Error(err))
 		return
 	}
-	art, err := h.svc.GetPubById(ctx, id)
+	var eg errgroup.Group
+	var art domain.Article
+	eg.Go(func() error {
+		art, err = h.svc.GetPubById(ctx, id)
+		return err
+	})
+	err = eg.Wait()
 	if err != nil {
 		ctx.JSON(http.StatusOK, Result{Code: 5, Msg: "系统错误"})
-		h.l.Error("获得文章信息失败", logger.Error(err))
 		return
 	}
+	go func() {
+		er := h.intrSvc.IncrReadCnt(ctx, h.biz, art.Id)
+		if er != nil {
+			h.l.Error("增加阅读计数失败")
+		}
+	}()
+
 	ctx.JSON(http.StatusOK, Result{
 		Data: ArticleVO{
 			Id:      art.Id,
@@ -175,4 +194,19 @@ func (h *ArticleHandler) PubDetail(ctx *gin.Context) {
 			Utime:   art.Utime.Format(time.DateTime),
 		},
 	})
+}
+
+func (h *ArticleHandler) Like(ctx *gin.Context) (Result, error) {
+	var err error
+	var req LikeReq
+	var uc ijwt.UserClaims
+	if req.Like {
+		err = h.intrSvc.Like(ctx, h.biz, req.Id, uc.Uid)
+	} else {
+		err = h.intrSvc.CancelLike(ctx, h.biz, req.Id, uc.Uid)
+	}
+	if err != nil {
+		return Result{Code: 5, Msg: "系统错误"}, nil
+	}
+	return Result{Msg: "ok"}, nil
 }

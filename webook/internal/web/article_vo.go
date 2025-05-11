@@ -21,13 +21,15 @@ func (req ArticleReq) toDomain(uid int64) domain.Article {
 	}
 }
 
-type PublishedArticle struct {
-	domain.Article
-}
-
 type ListReq struct {
 	Offset int `json:"offset"`
 	Limit  int `json:"limit"`
+}
+
+type LikeReq struct {
+	Id int64 `json:"id"`
+	// 点赞，取消点赞都复用这个
+	Like bool `json:"like"`
 }
 
 type ArticleVO struct {
@@ -40,4 +42,13 @@ type ArticleVO struct {
 	Status uint8  `json:"status"`
 	Ctime  string `json:"ctime"`
 	Utime  string `json:"utime"`
+
+	// 点赞之类的信息
+	ReadCnt    int64 `json:"read_cnt"`
+	CollectCnt int64 `json:"collect_cnt"`
+	LikeCnt    int64 `json:"like_cnt"`
+
+	// 个人是否点赞信息
+	Collected bool `json:"collected"`
+	Liked     bool `json:"liked"`
 }
