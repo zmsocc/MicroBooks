@@ -1,6 +1,8 @@
-package main
+package test
 
-import "fmt"
+import (
+	"fmt"
+)
 
 func main() {
 	//DeferClosure()
@@ -12,7 +14,9 @@ func main() {
 	//DeferClosureLoopV2()
 	//DeferClosureLoopV3()
 	//ShareSlice()
-	UseOuter()
+	//UseOuter()
+	//TestChannel()
+	//TestChannelClose()
 }
 
 func DeferClosure() {
@@ -129,4 +133,12 @@ func (i Inner) SayHello() {
 func UseOuter() {
 	var o Outer
 	o.SayHello()
+}
+
+func TestChannel() {
+	// 一个可以缓存容量为 1 的，放 int 类型
+	ch := make(chan int, 1)
+	ch <- 123
+	println(<-ch)
+	close(ch)
 }
