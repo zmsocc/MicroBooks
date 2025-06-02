@@ -11,4 +11,6 @@ type Interactive struct {
 	CollectCnt int64
 	Utime      time.Time
 	Ctime      time.Time
+	Liked      bool
+	Collected  bool
 }

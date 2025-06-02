@@ -7,10 +7,17 @@ import (
 	"time"
 )
 
+var ErrRecordNotFound = gorm.ErrRecordNotFound
+
 type InteractiveDAO interface {
 	IncrReadCnt(ctx context.Context, biz string, bizId int64) error
 	IncrLikeInfo(ctx context.Context, biz string, bizId, uid int64) error
 	DecrLikeInfo(ctx context.Context, biz string, bizId, uid int64) error
+	InsertCollectionBiz(ctx context.Context, cb UserCollectionBiz) error
+	DecrCollectInfo(ctx context.Context, cb UserCollectionBiz) error
+	GetCollectInfo(ctx context.Context, biz string, bizId, uid int64) (UserCollectionBiz, error)
+	GetLikeInfo(ctx context.Context, biz string, bizId, uid int64) (UserLikeBiz, error)
+	Get(ctx context.Context, biz string, bizId int64) (Interactive, error)
 }
 
 type interactiveDAO struct {
@@ -94,12 +101,92 @@ func (d *interactiveDAO) DecrLikeInfo(ctx context.Context, biz string, bizId, ui
 	})
 }
 
+func (d *interactiveDAO) InsertCollectionBiz(ctx context.Context, cb UserCollectionBiz) error {
+	now := time.Now().UnixMilli()
+	cb.Utime = now
+	cb.Ctime = now
+	return d.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// 插入收藏项目
+		err := d.db.WithContext(ctx).Create(&cb).Error
+		if err != nil {
+			return err
+		}
+		// 这边就是更新数量
+		return tx.Clauses(clause.OnConflict{
+			DoUpdates: clause.Assignments(map[string]interface{}{
+				"collect_cnt": gorm.Expr("collect_cnt + ?", 1),
+				"utime":       now,
+			}),
+		}).Create(&Interactive{
+			Biz:        cb.Biz,
+			BizId:      cb.BizId,
+			CollectCnt: 1,
+			Utime:      now,
+			Ctime:      now,
+		}).Error
+	})
+}
+
+func (d *interactiveDAO) DecrCollectInfo(ctx context.Context, cb UserCollectionBiz) error {
+	now := time.Now().UnixMilli()
+	return d.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		err := tx.Find(&UserLikeBiz{}).
+			Where("biz = ? AND biz_id = ? AND uid = ?", cb.Biz, cb.BizId, cb.Uid).
+			Updates(map[string]interface{}{
+				"utime":  now,
+				"status": 0,
+			}).Error
+		if err != nil {
+			return err
+		}
+		return tx.Model(&Interactive{}).Where("biz = ? AND biz_id = ?", cb.Biz, cb.BizId).
+			Updates(map[string]interface{}{
+				"collect_cnt": gorm.Expr("collect_cnt + ?", -1),
+				"utime":       now,
+			}).Error
+	})
+
+}
+
+func (d *interactiveDAO) GetCollectInfo(ctx context.Context, biz string, bizId, uid int64) (UserCollectionBiz, error) {
+	var res UserCollectionBiz
+	err := d.db.WithContext(ctx).
+		Where("biz = ? AND biz_id = ? AND uid = ? AND status = ?",
+			biz, bizId, uid, 1).First(&res).Error
+	return res, err
+}
+
+func (d *interactiveDAO) GetLikeInfo(ctx context.Context, biz string, bizId, uid int64) (UserLikeBiz, error) {
+	var res UserLikeBiz
+	err := d.db.WithContext(ctx).
+		Where("biz = ? AND biz_id = ? AND uid = ?", biz, bizId, uid).First(&res).Error
+	return res, err
+}
+
+func (d *interactiveDAO) Get(ctx context.Context, biz string, bizId int64) (Interactive, error) {
+	var res Interactive
+	err := d.db.WithContext(ctx).
+		Where("biz = ? AND biz_id = ?", biz, bizId).First(&res).Error
+	return res, err
+}
+
 type UserLikeBiz struct {
 	Id    int64  `gorm:"primaryKey;autoIncrement"`
 	Biz   string `gorm:"uniqueIndex:uid_biz_id_type; type:varchar(128)"`
 	BizId int64  `gorm:"uniqueIndex:uid_biz_id_type"`
 	// 用户信息，谁点的赞
-	Uid   int64
+	Uid   int64 `gorm:"uniqueIndex:uid_biz_id_type"`
+	Utime int64
+	Ctime int64
+	// 软删除
+	Status uint8
+}
+
+type UserCollectionBiz struct {
+	Id    int64  `gorm:"primaryKey;autoIncrement"`
+	Biz   string `gorm:"uniqueIndex:uid_biz_id_type; type:varchar(128)"`
+	BizId int64  `gorm:"uniqueIndex:uid_biz_id_type"`
+	Uid   int64  `gorm:"uniqueIndex:uid_biz_id_type"`
 	Utime int64
 	Ctime int64
 	// 软删除

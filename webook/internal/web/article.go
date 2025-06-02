@@ -43,6 +43,7 @@ func (h *ArticleHandler) RegisterRoutes(server *gin.Engine) {
 	pub := server.Group("/pub")
 	pub.GET("/:id", h.PubDetail)
 	pub.POST("/like", ginx.WrapBody(h.Like))
+	pub.POST("/collect", ginx.WrapBody(h.Collect))
 }
 
 func (h *ArticleHandler) Edit(ctx *gin.Context) {
@@ -204,6 +205,21 @@ func (h *ArticleHandler) Like(ctx *gin.Context) (Result, error) {
 		err = h.intrSvc.Like(ctx, h.biz, req.Id, uc.Uid)
 	} else {
 		err = h.intrSvc.CancelLike(ctx, h.biz, req.Id, uc.Uid)
+	}
+	if err != nil {
+		return Result{Code: 5, Msg: "系统错误"}, nil
+	}
+	return Result{Msg: "ok"}, nil
+}
+
+func (h *ArticleHandler) Collect(ctx *gin.Context) (Result, error) {
+	var err error
+	var req CollectReq
+	var uc ijwt.UserClaims
+	if req.Collect {
+		err = h.intrSvc.Collect(ctx, h.biz, req.Id, uc.Uid)
+	} else {
+		err = h.intrSvc.CancelCollect(ctx, h.biz, req.Id, uc.Uid)
 	}
 	if err != nil {
 		return Result{Code: 5, Msg: "系统错误"}, nil

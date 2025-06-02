@@ -32,6 +32,12 @@ type LikeReq struct {
 	Like bool `json:"like"`
 }
 
+type CollectReq struct {
+	Id int64 `json:"id"`
+	// 点赞，取消点赞都复用这个
+	Collect bool `json:"like"`
+}
+
 type ArticleVO struct {
 	Id       int64  `json:"id"`
 	Title    string `json:"title"`
