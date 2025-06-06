@@ -37,19 +37,53 @@ func TestSelect(t *testing.T) {
 	ch1 := make(chan int, 1)
 	ch2 := make(chan int, 1)
 	go func() {
-		for i := 0; i < 3; i++ {
-			ch1 <- i
-			ch2 <- i + 1
-		}
-		close(ch1)
-		close(ch2)
+		time.Sleep(1 * time.Second)
+		ch1 <- 123
+	}()
+	go func() {
+		time.Sleep(1 * time.Second)
+		ch2 <- 456
 	}()
 	select {
-	//case val := <-ch1:
-	//	t.Log(val)
+	case val := <-ch1:
+		t.Log("ch1", val)
+		val = <-ch2
+		t.Log("ch2", val)
 	case val := <-ch2:
+		t.Log("ch2", val)
+		val = <-ch1
+		t.Log("ch1", val)
+	}
+}
+
+func TestLoopChannel(t *testing.T) {
+	ch := make(chan int, 1)
+	go func() {
+		for i := 0; i < 3; i++ {
+			ch <- i
+			time.Sleep(1 * time.Second)
+		}
+		for i := 3; i < 6; i++ {
+			ch <- i
+			time.Sleep(1 * time.Second)
+		}
+		close(ch)
+	}()
+	//go func() {
+	//	for i := 10; i < 13; i++ {
+	//		ch <- i
+	//		time.Sleep(1 * time.Second)
+	//	}
+	//	for i := 100; i < 103; i++ {
+	//		ch <- i
+	//		time.Sleep(1 * time.Second)
+	//	}
+	//	close(ch)
+	//}()
+	for val := range ch {
 		t.Log(val)
 	}
+	t.Log("channel 被关了")
 }
 
 func TestConsumer(t *testing.T) {

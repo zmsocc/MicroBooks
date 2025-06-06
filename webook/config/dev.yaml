@@ -1,0 +1,9 @@
+db:
+  dsn: "root:root@tcp(localhost:13336)/webook"
+
+redis:
+  addr: "localhost:6379"
+
+kafka:
+  addrs:
+    - "localhost:9094"

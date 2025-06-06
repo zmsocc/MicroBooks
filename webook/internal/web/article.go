@@ -168,8 +168,9 @@ func (h *ArticleHandler) PubDetail(ctx *gin.Context) {
 	}
 	var eg errgroup.Group
 	var art domain.Article
+	uc := ctx.MustGet("users").(*ijwt.UserClaims)
 	eg.Go(func() error {
-		art, err = h.svc.GetPubById(ctx, id)
+		art, err = h.svc.GetPubById(ctx, id, uc.Uid)
 		return err
 	})
 	err = eg.Wait()

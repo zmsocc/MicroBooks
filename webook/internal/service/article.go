@@ -3,7 +3,9 @@ package service
 import (
 	"context"
 	"github.com/zmsocc/practice/webook/internal/domain"
+	"github.com/zmsocc/practice/webook/internal/event/article"
 	"github.com/zmsocc/practice/webook/internal/repository/articles"
+	"github.com/zmsocc/practice/webook/pkg/logger"
 )
 
 type ArticleService interface {
@@ -12,16 +14,23 @@ type ArticleService interface {
 	Withdraw(ctx context.Context, art domain.Article) error
 	List(ctx context.Context, uid int64, offset, limit int) ([]domain.Article, error)
 	GetById(ctx context.Context, id int64) (domain.Article, error)
-	GetPubById(ctx context.Context, id int64) (domain.Article, error)
+	GetPubById(ctx context.Context, id, uid int64) (domain.Article, error)
 }
 
 type articleService struct {
-	repo articles.ArticleRepository
+	repo     articles.ArticleRepository
+	author   articles.ArticleAuthorRepository
+	reader   articles.ArticleReaderRepository
+	l        logger.Logger
+	producer article.Producer
 }
 
-func NewArticleService(repo articles.ArticleRepository) ArticleService {
+func NewArticleService(repo articles.ArticleRepository, l logger.Logger,
+	producer article.Producer) ArticleService {
 	return &articleService{
-		repo: repo,
+		repo:     repo,
+		l:        l,
+		producer: producer,
 	}
 }
 
@@ -51,6 +60,22 @@ func (svc *articleService) GetById(ctx context.Context, id int64) (domain.Articl
 	return svc.repo.GetById(ctx, id)
 }
 
-func (svc *articleService) GetPubById(ctx context.Context, id int64) (domain.Article, error) {
+func (svc *articleService) GetPubById(ctx context.Context, id, uid int64) (domain.Article, error) {
+	art, err := svc.repo.GetPubById(ctx, id)
+	if err == nil {
+		go func() {
+			er := svc.producer.ProduceReadEvent(
+				ctx,
+				article.ReadEvent{
+					// 即便你的消费者要用 art 里面的数据，
+					// 让他去查询，你不要在 event 里面带
+					Uid: uid,
+					Aid: id,
+				})
+			if er == nil {
+				svc.l.Error("发送阅读者事件失败")
+			}
+		}()
+	}
 	return svc.repo.GetPubById(ctx, id)
 }
