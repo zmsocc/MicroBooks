@@ -11,6 +11,7 @@ import (
 
 type InteractiveRepository interface {
 	IncrReadCnt(ctx context.Context, biz string, bizId int64) error
+	BatchIncrReadCnt(ctx context.Context, biz []string, bizId []int64) error
 	IncrLike(ctx context.Context, biz string, bizId, uid int64) error
 	DecrLike(ctx context.Context, biz string, bizId, uid int64) error
 	AddCollectionItem(ctx context.Context, biz string, bizId, uid int64) error
@@ -41,6 +42,12 @@ func (i *interactiveRepository) IncrReadCnt(ctx context.Context, biz string, biz
 		return err
 	}
 	return i.cache.IncrReadCntIfPresent(ctx, biz, bizId)
+}
+
+// BatchIncrReadCnt bizs 和 ids 的长度必须相等
+func (i *interactiveRepository) BatchIncrReadCnt(ctx context.Context, biz []string, bizId []int64) error {
+	// 在这里要不要检测 bizs 和 ids 的长度是否相等
+	return i.dao.BatchIncrReadCnt(ctx, biz, bizId)
 }
 
 func (i *interactiveRepository) IncrLike(ctx context.Context, biz string, bizId, uid int64) error {

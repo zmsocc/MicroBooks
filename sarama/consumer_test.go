@@ -19,7 +19,7 @@ func TestConsumer(t *testing.T) {
 	start := time.Now()
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
-	err = consumer.Consume(ctx, []string{"test_topic"}, testConsumerGroupHandler{})
+	err = consumer.Consume(ctx, []string{"read_article"}, testConsumerGroupHandler{})
 	// 你消费结束，就会到这里
 	t.Log(err, time.Since(start).String())
 }

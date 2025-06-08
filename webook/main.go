@@ -11,7 +11,6 @@ func main() {
 		panic(err) // 或优雅处理
 	}
 	//server := gin.Default()
-
 	//server := InitWebServer()
 	//server.Run(":8080")
 
@@ -26,4 +25,5 @@ func main() {
 	server.GET("/hello", func(ctx *gin.Context) {
 		ctx.String(http.StatusOK, "你好，你来了")
 	})
+	server.Run(":8080")
 }

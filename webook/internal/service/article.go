@@ -61,7 +61,7 @@ func (svc *articleService) GetById(ctx context.Context, id int64) (domain.Articl
 }
 
 func (svc *articleService) GetPubById(ctx context.Context, id, uid int64) (domain.Article, error) {
-	art, err := svc.repo.GetPubById(ctx, id)
+	_, err := svc.repo.GetPubById(ctx, id)
 	if err == nil {
 		go func() {
 			er := svc.producer.ProduceReadEvent(

@@ -18,6 +18,7 @@ type InteractiveDAO interface {
 	GetCollectInfo(ctx context.Context, biz string, bizId, uid int64) (UserCollectionBiz, error)
 	GetLikeInfo(ctx context.Context, biz string, bizId, uid int64) (UserLikeBiz, error)
 	Get(ctx context.Context, biz string, bizId int64) (Interactive, error)
+	BatchIncrReadCnt(ctx context.Context, biz []string, bizId []int64) error
 }
 
 type interactiveDAO struct {
@@ -168,6 +169,30 @@ func (d *interactiveDAO) Get(ctx context.Context, biz string, bizId int64) (Inte
 	err := d.db.WithContext(ctx).
 		Where("biz = ? AND biz_id = ?", biz, bizId).First(&res).Error
 	return res, err
+}
+
+func (d *interactiveDAO) BatchIncrReadCnt(ctx context.Context, biz []string, bizId []int64) error {
+	// 可以用 map 合并吗？
+	// 看情况。如果一批次里面，biz 和 bizId 都相等的占很多，那么就 map 合并，性能会更好
+	// 不然你合并了没效果
+
+	// 这个批次处理为什么比一次次提交要快？
+	// A：十条消息调用十次 IncrReadCnt
+	// B 就是批量
+	// 事务本身的开销，A 是 B 的十倍
+	// 刷新 redolog，undolog，binlog 到磁盘，A 是十次，B 是一次
+	return d.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		txDAO := NewInteractiveDAO(tx)
+		for i := range biz {
+			err := txDAO.IncrReadCnt(ctx, biz[i], bizId[i])
+			if err != nil {
+				// 记个日志
+				// 也可以 return err
+				return err
+			}
+		}
+		return nil
+	})
 }
 
 type UserLikeBiz struct {
