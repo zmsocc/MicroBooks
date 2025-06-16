@@ -6,5 +6,6 @@ import (
 )
 
 func InitTables(db *gorm.DB) error {
-	return db.AutoMigrate(&User{}, &articles.Article{})
+	return db.AutoMigrate(&User{}, &articles.Article{}, &Interactive{},
+		&UserLikeBiz{}, &UserCollectionBiz{})
 }

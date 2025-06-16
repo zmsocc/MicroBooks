@@ -35,7 +35,7 @@ func (d *interactiveDAO) IncrReadCnt(ctx context.Context, biz string, bizId int6
 	now := time.Now().UnixMilli()
 	return d.db.WithContext(ctx).Clauses(clause.OnConflict{
 		//Columns:   []clause.Column{{Name: "id"}},
-		DoUpdates: clause.Assignments(map[string]interface{}{
+		DoUpdates: clause.Assignments(map[string]any{
 			"read_cnt": gorm.Expr("read_cnt + ?", 1),
 			"utime":    now,
 		}),
@@ -220,7 +220,7 @@ type UserCollectionBiz struct {
 
 type Interactive struct {
 	Id         int64  `gorm:"primaryKey;autoIncrement"`
-	Biz        string `gorm:"type:varchar(128); uniqueIndex:biz_type_id"`
+	Biz        string `gorm:"type:varchar(128);uniqueIndex:biz_type_id"`
 	BizId      int64  `gorm:"uniqueIndex:biz_type_id"`
 	ReadCnt    int64
 	LikeCnt    int64
