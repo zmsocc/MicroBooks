@@ -19,6 +19,7 @@ type InteractiveRepository interface {
 	Liked(ctx context.Context, biz string, bizId, uid int64) (bool, error)
 	Collected(ctx context.Context, biz string, bizId, uid int64) (bool, error)
 	Get(ctx context.Context, biz string, bizId int64) (domain.Interactive, error)
+	AddRecord(ctx context.Context, aid int64, uid int64) error
 }
 
 type interactiveRepository struct {
@@ -36,6 +37,11 @@ func NewInteractiveRepository(dao dao.InteractiveDAO, cache cache.InteractiveCac
 	}
 }
 
+func (i *interactiveRepository) AddRecord(ctx context.Context, aid int64, uid int64) error {
+	//TODO implement me
+	panic("implement me")
+}
+
 func (i *interactiveRepository) IncrReadCnt(ctx context.Context, biz string, bizId int64) error {
 	err := i.dao.IncrReadCnt(ctx, biz, bizId)
 	if err != nil {
@@ -47,7 +53,11 @@ func (i *interactiveRepository) IncrReadCnt(ctx context.Context, biz string, biz
 // BatchIncrReadCnt bizs 和 ids 的长度必须相等
 func (i *interactiveRepository) BatchIncrReadCnt(ctx context.Context, biz []string, bizId []int64) error {
 	// 在这里要不要检测 bizs 和 ids 的长度是否相等
-	return i.dao.BatchIncrReadCnt(ctx, biz, bizId)
+	err := i.dao.BatchIncrReadCnt(ctx, biz, bizId)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (i *interactiveRepository) IncrLike(ctx context.Context, biz string, bizId, uid int64) error {

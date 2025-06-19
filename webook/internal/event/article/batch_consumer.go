@@ -15,13 +15,21 @@ type InteractiveReadEventBatchConsumer struct {
 	l      logger.Logger
 }
 
+func NewInteractiveReadEventBatchConsumer(client sarama.Client, repo repository.InteractiveRepository, l logger.Logger) *InteractiveReadEventBatchConsumer {
+	return &InteractiveReadEventBatchConsumer{
+		client: client,
+		repo:   repo,
+		l:      l,
+	}
+}
+
 func (k *InteractiveReadEventBatchConsumer) Start() error {
 	cg, err := sarama.NewConsumerGroupFromClient("interactive", k.client)
 	if err != nil {
 		return err
 	}
 	go func() {
-		er := cg.Consume(context.Background(), []string{"article_read"},
+		er := cg.Consume(context.Background(), []string{"read_article"},
 			saramax.NewBatchHandler[ReadEvent](k.l, k.Consume))
 		if er != nil {
 			k.l.Error("退出了消费循环异常", logger.Error(err))
