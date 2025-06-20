@@ -7,6 +7,7 @@ import (
 	"github.com/zmsocc/practice/webook/internal/web"
 	"github.com/zmsocc/practice/webook/internal/web/ijwt"
 	"github.com/zmsocc/practice/webook/internal/web/middleware"
+	"github.com/zmsocc/practice/webook/pkg/ginx/middlewares/metric"
 	"github.com/zmsocc/practice/webook/pkg/ginx/middlewares/ratelimit"
 	"strings"
 	"time"
@@ -30,12 +31,21 @@ func corsHdl() gin.HandlerFunc {
 func InitMiddlewares(jwtHdl ijwt.Handler, cmd redis.Cmdable) []gin.HandlerFunc {
 	return []gin.HandlerFunc{
 		corsHdl(),
+		(&metric.MiddlewareBuilder{
+			Namespace: "geekbang_daming",
+			Subsystem: "webook",
+			Name:      "gin_http",
+			// 上面三个不能使用连字符-
+			Help:       "统计 GIN 的 GTTP 接口",
+			InstanceID: "my-instance-1",
+		}).Build(),
 		middleware.NewLoginJWTMiddlewareBuilder(jwtHdl).
 			IgnorePaths("/users/signup").
 			IgnorePaths("/users/login").
 			IgnorePaths("/users/login_sms/code/send").
 			IgnorePaths("/users/login_sms").
 			IgnorePaths("/users/refresh_token").
+			IgnorePaths("/test/metrics").
 			Build(),
 		ratelimit.NewBuilder(cmd, time.Minute, 100).Build(),
 	}
@@ -47,5 +57,6 @@ func InitWebServer(mdls []gin.HandlerFunc, userHdl *web.UserHandler,
 	server.Use(mdls...)
 	userHdl.RegisterRoutes(server)
 	articleHdl.RegisterRoutes(server)
+	(&web.ObservabilityHandler{}).RegisterRoutes(server)
 	return server
 }

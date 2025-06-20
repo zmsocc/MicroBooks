@@ -2,10 +2,12 @@ package ioc
 
 import (
 	"fmt"
+
 	"github.com/spf13/viper"
 	"github.com/zmsocc/practice/webook/internal/repository/dao"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
+	"gorm.io/plugin/prometheus"
 )
 
 func InitDB() *gorm.DB {
@@ -24,6 +26,19 @@ func InitDB() *gorm.DB {
 		panic(err)
 	}
 	err = dao.InitTables(db)
+	if err != nil {
+		panic(err)
+	}
+	err = db.Use(prometheus.New(prometheus.Config{
+		DBName:          "webook",
+		RefreshInterval: 15,
+		StartServer:     false,
+		MetricsCollector: []prometheus.MetricsCollector{
+			&prometheus.MySQL{
+				VariableNames: []string{"thread_running"},
+			},
+		},
+	}))
 	if err != nil {
 		panic(err)
 	}
