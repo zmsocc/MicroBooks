@@ -3,10 +3,12 @@ package ioc
 import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/redis/go-redis/v9"
 	"github.com/zmsocc/practice/webook/internal/web"
 	"github.com/zmsocc/practice/webook/internal/web/ijwt"
 	"github.com/zmsocc/practice/webook/internal/web/middleware"
+	"github.com/zmsocc/practice/webook/pkg/ginx"
 	"github.com/zmsocc/practice/webook/pkg/ginx/middlewares/metric"
 	"github.com/zmsocc/practice/webook/pkg/ginx/middlewares/ratelimit"
 	"strings"
@@ -29,6 +31,13 @@ func corsHdl() gin.HandlerFunc {
 }
 
 func InitMiddlewares(jwtHdl ijwt.Handler, cmd redis.Cmdable) []gin.HandlerFunc {
+	ginx.InitCounter(prometheus.CounterOpts{
+		Namespace: "geekbang_daming",
+		Subsystem: "webook",
+		Name:      "http_biz_code",
+		// 上面三个不能使用连字符-
+		Help: "HTTP 的业务错误码",
+	})
 	return []gin.HandlerFunc{
 		corsHdl(),
 		(&metric.MiddlewareBuilder{

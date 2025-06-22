@@ -28,9 +28,9 @@ func (m *MiddlewareBuilder) Build() gin.HandlerFunc {
 			"instance_id": m.InstanceID,
 		},
 		Objectives: map[float64]float64{
-			0.5:   0.05,
+			0.5:   0.01,
 			0.9:   0.01,
-			0.99:  0.001,
+			0.99:  0.005,
 			0.999: 0.0001,
 		},
 	}, labels)

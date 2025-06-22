@@ -27,6 +27,7 @@ func NewUserCache(cmd redis.Cmdable) UserCache {
 }
 
 func (c *userCache) Get(ctx context.Context, id int64) (domain.User, error) {
+	//ctx = context.WithValue(ctx, "biz", "user")
 	key := c.key(id)
 	data, err := c.cmd.Get(ctx, key).Result()
 	if err != nil {

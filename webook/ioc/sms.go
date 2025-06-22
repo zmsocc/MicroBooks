@@ -9,4 +9,6 @@ import (
 func InitSMSService(cmd redis.Cmdable) sms.Service {
 	// tencent.InitSmsTencentService()
 	return memory.NewService()
+	// 接入监控
+	// return metrics.NewPrometheusDecorator(memory.NewService())
 }

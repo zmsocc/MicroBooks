@@ -2,9 +2,9 @@ package ioc
 
 import (
 	"fmt"
-
 	"github.com/spf13/viper"
 	"github.com/zmsocc/practice/webook/internal/repository/dao"
+	"github.com/zmsocc/practice/webook/pkg/gormx"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"gorm.io/plugin/prometheus"
@@ -41,6 +41,13 @@ func InitDB() *gorm.DB {
 	}))
 	if err != nil {
 		panic(err)
+	}
+	// 监控查询的执行时间
+	pcb := gormx.NewCallbacks()
+	pcb.RegisterAll(db)
+	err = db.Use(pcb)
+	if err != nil {
+		return nil
 	}
 	return db
 }
