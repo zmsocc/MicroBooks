@@ -10,6 +10,7 @@ import (
 	"github.com/zmsocc/practice/webook/internal/service"
 	"github.com/zmsocc/practice/webook/internal/web/ijwt"
 	"github.com/zmsocc/practice/webook/pkg/ginx"
+	"go.opentelemetry.io/otel/trace"
 	"net/http"
 	"strings"
 	"time"
@@ -89,11 +90,14 @@ func (h *UserHandler) SignUp(ctx *gin.Context) {
 		ctx.String(http.StatusOK, "密码必须包含字母、数字、特殊字符，并且长度至少为8")
 		return
 	}
-	err = h.svc.Signup(ctx, domain.User{
+	// 调用一下 svc 的方法
+	err = h.svc.Signup(ctx.Request.Context(), domain.User{
 		Email:    req.Email,
 		Password: req.Password,
 	})
 	if errors.Is(err, service.ErrUserDuplicateEmail) {
+		span := trace.SpanFromContext(ctx.Request.Context())
+		span.AddEvent("邮件冲突")
 		ctx.String(http.StatusOK, "邮箱冲突")
 		return
 	}

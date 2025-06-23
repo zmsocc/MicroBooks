@@ -5,8 +5,10 @@ import (
 	"github.com/spf13/viper"
 	"github.com/zmsocc/practice/webook/internal/repository/dao"
 	"github.com/zmsocc/practice/webook/pkg/gormx"
+	"github.com/zmsocc/practice/webook/pkg/logger"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
+	"gorm.io/plugin/opentelemetry/tracing"
 	"gorm.io/plugin/prometheus"
 )
 
@@ -44,10 +46,21 @@ func InitDB() *gorm.DB {
 	}
 	// 监控查询的执行时间
 	pcb := gormx.NewCallbacks()
-	pcb.RegisterAll(db)
+	//pcb.RegisterAll(db)
 	err = db.Use(pcb)
 	if err != nil {
 		return nil
 	}
+	db.Use(tracing.NewPlugin(tracing.WithDBName("webook"),
+		tracing.WithQueryFormatter(func(query string) string {
+			l := logger.NewNopLogger()
+			l.Debug("", logger.String("query", query))
+			return query
+		}),
+		// 不要记录 metrics
+		tracing.WithoutMetrics(),
+		// 不要记录查询参数
+		tracing.WithoutQueryVariables()))
+
 	return db
 }

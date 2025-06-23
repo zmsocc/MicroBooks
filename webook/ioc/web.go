@@ -11,6 +11,7 @@ import (
 	"github.com/zmsocc/practice/webook/pkg/ginx"
 	"github.com/zmsocc/practice/webook/pkg/ginx/middlewares/metric"
 	"github.com/zmsocc/practice/webook/pkg/ginx/middlewares/ratelimit"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 	"strings"
 	"time"
 )
@@ -48,6 +49,7 @@ func InitMiddlewares(jwtHdl ijwt.Handler, cmd redis.Cmdable) []gin.HandlerFunc {
 			Help:       "统计 GIN 的 GTTP 接口",
 			InstanceID: "my-instance-1",
 		}).Build(),
+		otelgin.Middleware("webook"),
 		middleware.NewLoginJWTMiddlewareBuilder(jwtHdl).
 			IgnorePaths("/users/signup").
 			IgnorePaths("/users/login").
