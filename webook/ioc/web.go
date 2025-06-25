@@ -10,7 +10,6 @@ import (
 	"github.com/zmsocc/practice/webook/internal/web/middleware"
 	"github.com/zmsocc/practice/webook/pkg/ginx"
 	"github.com/zmsocc/practice/webook/pkg/ginx/middlewares/metric"
-	"github.com/zmsocc/practice/webook/pkg/ginx/middlewares/ratelimit"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 	"strings"
 	"time"
@@ -58,7 +57,7 @@ func InitMiddlewares(jwtHdl ijwt.Handler, cmd redis.Cmdable) []gin.HandlerFunc {
 			IgnorePaths("/users/refresh_token").
 			IgnorePaths("/test/metrics").
 			Build(),
-		ratelimit.NewBuilder(cmd, time.Minute, 100).Build(),
+		//ratelimit.NewBuilder(cmd, time.Minute, 100).Build(),
 	}
 }
 
