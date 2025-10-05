@@ -7,6 +7,7 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+//go:generate mockgen -source=interactive.go -package=svcmocks -destination=mocks/interactive.mock.go InteractiveService
 type InteractiveService interface {
 	IncrReadCnt(ctx context.Context, biz string, bizId int64) error
 	Like(ctx context.Context, biz string, bizId, uid int64) error
@@ -14,6 +15,7 @@ type InteractiveService interface {
 	Collect(ctx context.Context, biz string, bizId, uid int64) error
 	CancelCollect(ctx context.Context, biz string, bizId, uid int64) error
 	Get(ctx context.Context, biz string, bizId, uid int64) (domain.Interactive, error)
+	GetByIds(ctx context.Context, biz string, bizIds []int64) (map[int64]domain.Interactive, error)
 }
 
 type interactiveService struct {
@@ -75,4 +77,9 @@ func (i *interactiveService) Get(ctx context.Context, biz string, bizId, uid int
 	intr.Liked = liked
 	intr.Collected = collected
 	return intr, err
+}
+
+func (i *interactiveService) GetByIds(ctx context.Context, biz string, bizIds []int64) (map[int64]domain.Interactive, error) {
+	//TODO implement me
+	panic("implement me")
 }

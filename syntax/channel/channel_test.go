@@ -1,9 +1,10 @@
-package test
+package channel
 
 import (
 	"context"
 	"github.com/IBM/sarama"
 	"github.com/stretchr/testify/assert"
+	"github.com/zmsocc/practice/syntax"
 	"testing"
 	"time"
 )
@@ -92,7 +93,7 @@ func TestConsumer(t *testing.T) {
 	assert.NoError(t, err)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
 	defer cancel()
-	err = eg.Consume(ctx, []string{"test_topic"}, &ConsumerHandler{})
+	err = eg.Consume(ctx, []string{"test_topic"}, &test.ConsumerHandler{})
 	assert.NoError(t, err)
 }
 

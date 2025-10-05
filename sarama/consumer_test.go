@@ -85,6 +85,7 @@ func (t testConsumerGroupHandler) ConsumeClaim(session sarama.ConsumerGroupSessi
 				})
 			}
 		}
+
 		cancel()
 		err := eg.Wait()
 		if err != nil {
