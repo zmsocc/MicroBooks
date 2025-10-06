@@ -16,10 +16,8 @@ func main() {
 	//server := gin.Default()
 	//server := InitWebServer()
 	//server.Run(":8080")
-
 	initPrometheus()
 	closeFunc := ioc.InitOTEL()
-
 	app := InitWebServer()
 	for _, c := range app.consumers {
 		err := c.Start()
@@ -27,6 +25,7 @@ func main() {
 			panic(err)
 		}
 	}
+	app.cron.Start()
 	server := app.web
 	//server := gin.Default()
 	//server.GET("/hello", func(ctx *gin.Context) {
@@ -36,6 +35,13 @@ func main() {
 	// 一分钟内你要关完退出
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
+	ctx = app.cron.Stop()
+	// 这边可以考虑超时强制退出，防止有些任务，执行特别长的时间
+	tm := time.NewTimer(time.Minute * 10)
+	select {
+	case <-ctx.Done():
+	case <-tm.C:
+	}
 	closeFunc(ctx)
 }
 

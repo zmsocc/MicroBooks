@@ -61,8 +61,7 @@ func (svc *articleService) List(ctx context.Context, uid int64, offset, limit in
 }
 
 func (svc *articleService) ListPub(ctx context.Context, start time.Time, offset, limit int) ([]domain.Article, error) {
-	//TODO implement me
-	panic("implement me")
+	return svc.repo.ListPub(ctx, start, offset, limit)
 }
 
 func (svc *articleService) GetById(ctx context.Context, id int64) (domain.Article, error) {

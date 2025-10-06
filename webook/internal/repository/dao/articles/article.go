@@ -135,3 +135,10 @@ func (d *articleDao) GetPubById(ctx context.Context, id int64) (Article, error) 
 	err := d.db.WithContext(ctx).Where("id = ?", id).First(&art).Error
 	return art, err
 }
+
+func (d *articleDao) ListPub(ctx context.Context, start time.Time, offset int, limit int) ([]Article, error) {
+	var res []Article
+	err := d.db.WithContext(ctx).Where("utime<?", start.UnixMilli()).
+		Order("utime DESC").Offset(offset).Limit(limit).Find(&res).Error
+	return res, err
+}
