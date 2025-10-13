@@ -1,0 +1,46 @@
+syntax = "proto3";
+option go_package = "github.com/zmsocc/practice/grpc";
+
+message User {
+  // Protobuf 对前面几个字段有性能优化，
+  int64 id = 1;
+  string name = 2;
+  // 可以不连续
+  // 即便要删除字段，也不要复用被删除字段的编号
+//  string avatar = 4;
+//  int64 age = 5;
+  map<string, string> attribute = 6;
+  // 可选的，是指针
+  optional int32 age = 7;
+  // 切片
+  repeated string nicknames = 9;
+  Address address = 8;
+  oneof contacts {
+    string email = 10;
+    string phone = 11;
+  }
+  Gender gender = 12;
+}
+
+message Address {
+  string province = 1;
+  string city = 2;
+}
+
+enum Gender {
+  Unknown = 0;
+  Mali = 1;
+  Female = 2;
+}
+
+service UserService {
+  rpc GetById(GetByIdRequest) returns (GetByIdResponse);
+}
+
+message GetByIdRequest {
+  int64 id = 1;
+}
+
+message GetByIdResponse {
+  User user = 1;
+}
