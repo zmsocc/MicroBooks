@@ -22,6 +22,7 @@ func NewService(svc sms.Service) *Service {
 }
 
 func (s *Service) Send(ctx context.Context, tpl string, args []string, numbers ...string) error {
+	//tracer := s.tracerProvider.Tracer()
 	ctx, span := s.tracer.Start(ctx, "sms_send_"+tpl,
 		// 因为我是一个调用短信服务商的客户端
 		trace.WithSpanKind(trace.SpanKindClient))

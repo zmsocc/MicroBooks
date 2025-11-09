@@ -16,6 +16,19 @@ import (
 	"github.com/zmsocc/practice/webook/ioc"
 )
 
+var rankingServiceSet = wire.NewSet(
+	repository.NewCachedRankingRepository,
+	cache.NewRankingRedisCache,
+	service.NewBatchRankingService,
+)
+
+var interactiveSvcProvider = wire.NewSet(
+	service.NewInteractiveService,
+	repository.NewInteractiveRepository,
+	dao.NewInteractiveDAO,
+	cache.NewRedisInteractiveCache,
+)
+
 func InitWebServer() *App {
 	wire.Build(
 		// 最基础的第三方依赖
@@ -26,6 +39,11 @@ func InitWebServer() *App {
 		ioc.NewConsumers,
 		ioc.NewSyncProducer,
 
+		rankingServiceSet,
+		interactiveSvcProvider,
+		ioc.InitJobs,
+		ioc.InitRankingJob,
+
 		// consumer
 		article.NewInteractiveReadEventBatchConsumer,
 		article.NewKafkaProducer,
@@ -33,22 +51,18 @@ func InitWebServer() *App {
 		// 初始化 DAO
 		dao.NewUserDAO,
 		articles.NewArticleDao,
-		dao.NewInteractiveDAO,
 
 		cache.NewUserCache,
 		cache.NewCodeCache,
 		cache.NewArticleCache,
-		cache.NewRedisInteractiveCache,
 
 		repository.NewUserRepository,
 		repository.NewCodeRepository,
 		articles2.NewArticleRepository,
-		repository.NewInteractiveRepository,
 
 		service.NewUserService,
 		service.NewCodeService,
 		service.NewArticleService,
-		service.NewInteractiveService,
 
 		// 直接基于内存实现
 		ioc.InitSMSService,

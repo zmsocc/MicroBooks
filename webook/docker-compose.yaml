@@ -18,22 +18,29 @@ services:
     ports:
       - '6379:6379'
   kafka:
-    image: 'bitnami/kafka:3.6.0'
+    image: 'bitnami/kafka:3.6.1'
     environment:
-      - KAFKA_CFG_NODE_ID=0
-      #      - 三个分区
-      - KAFKA_CREATE_TOPICS=webook_binlog:3:1
-      #      - 允许自动创建 topic，线上不要开启
-      - KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE=true
-      - KAFKA_CFG_PROCESS_ROLES=controller,broker
-      - KAFKA_CFG_LISTENERS=PLAINTEXT://0.0.0.0:9092,CONTROLLER://:9093,EXTERNAL://0.0.0.0:9094
-      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092,EXTERNAL://localhost:9094
-      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT,PLAINTEXT:PLAINTEXT
-      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=0@kafka:9093
-      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      # 基础配置
+      KAFKA_CFG_NODE_ID: 0
+      KAFKA_CFG_PROCESS_ROLES: "controller,broker"
+
+      # KRaft 模式关键配置
+      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: "0@kafka:9093"
+      KAFKA_CFG_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
+
+      # 监听器配置
+      KAFKA_CFG_LISTENERS: "PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093"
+      KAFKA_CFG_ADVERTISED_LISTENERS: "PLAINTEXT://kafka:9092"
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT"
+
+      # Topic 配置
+      KAFKA_CREATE_TOPICS: "webook_binlog:1:1"  # 分区:1, 副本:1
+      KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: "true"
+
+      # 其他优化
+      KAFKA_CFG_LOG_FLUSH_INTERVAL_MESSAGES: 10000
     ports:
-      - '9092:9092'
-      - '9094:9094'
+      - '9092:9092'  # 客户端访问端口
   prometheus:
     image: prom/prometheus:v2.47.2
     volumes:
