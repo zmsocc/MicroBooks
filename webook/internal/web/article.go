@@ -217,8 +217,9 @@ func (h *ArticleHandler) Collect(ctx *gin.Context) (Result, error) {
 	var err error
 	var req CollectReq
 	var uc ijwt.UserClaims
+	var intr domain.Interactive
 	if req.Collect {
-		err = h.intrSvc.Collect(ctx, h.biz, req.Id, uc.Uid)
+		err = h.intrSvc.Collect(ctx, h.biz, intr.BizId, req.Id, uc.Uid)
 	} else {
 		err = h.intrSvc.CancelCollect(ctx, h.biz, req.Id, uc.Uid)
 	}

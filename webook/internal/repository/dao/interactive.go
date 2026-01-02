@@ -19,6 +19,7 @@ type InteractiveDAO interface {
 	GetLikeInfo(ctx context.Context, biz string, bizId, uid int64) (UserLikeBiz, error)
 	Get(ctx context.Context, biz string, bizId int64) (Interactive, error)
 	BatchIncrReadCnt(ctx context.Context, biz []string, bizId []int64) error
+	GetByIds(ctx context.Context, biz string, bizIds []int64) ([]Interactive, error)
 }
 
 type interactiveDAO struct {
@@ -114,7 +115,7 @@ func (d *interactiveDAO) InsertCollectionBiz(ctx context.Context, cb UserCollect
 		}
 		// 这边就是更新数量
 		return tx.Clauses(clause.OnConflict{
-			DoUpdates: clause.Assignments(map[string]interface{}{
+			DoUpdates: clause.Assignments(map[string]any{
 				"collect_cnt": gorm.Expr("collect_cnt + ?", 1),
 				"utime":       now,
 			}),
@@ -195,6 +196,12 @@ func (d *interactiveDAO) BatchIncrReadCnt(ctx context.Context, biz []string, biz
 	})
 }
 
+func (d *interactiveDAO) GetByIds(ctx context.Context, biz string, bizIds []int64) ([]Interactive, error) {
+	var res []Interactive
+	err := d.db.WithContext(ctx).Where("biz = ? AND id IN ?", biz, bizIds).Find(&res).Error
+	return res, err
+}
+
 type UserLikeBiz struct {
 	Id    int64  `gorm:"primaryKey;autoIncrement"`
 	Biz   string `gorm:"uniqueIndex:uid_biz_id_type; type:varchar(128)"`
@@ -212,6 +219,7 @@ type UserCollectionBiz struct {
 	Biz   string `gorm:"uniqueIndex:uid_biz_id_type; type:varchar(128)"`
 	BizId int64  `gorm:"uniqueIndex:uid_biz_id_type"`
 	Uid   int64  `gorm:"uniqueIndex:uid_biz_id_type"`
+	Cid   int64
 	Utime int64
 	Ctime int64
 	// 软删除
@@ -227,4 +235,6 @@ type Interactive struct {
 	CollectCnt int64
 	Utime      int64
 	Ctime      int64
+	Liked      bool
+	Collected  bool
 }

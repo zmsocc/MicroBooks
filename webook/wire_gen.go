@@ -47,13 +47,14 @@ func InitWebServer() *App {
 	interactiveDAO := dao.NewInteractiveDAO(db)
 	interactiveCache := cache.NewRedisInteractiveCache(cmdable)
 	interactiveRepository := repository.NewInteractiveRepository(interactiveDAO, interactiveCache, logger)
-	interactiveService := service.NewInteractiveService(interactiveRepository)
+	interactiveService := service.NewInteractiveService(interactiveRepository, logger)
 	articleHandler := web.NewArticleHandler(articleService, logger, interactiveService)
 	engine := ioc.InitWebServer(v, userHandler, articleHandler)
 	interactiveReadEventBatchConsumer := article.NewInteractiveReadEventBatchConsumer(client, interactiveRepository, logger)
 	v2 := ioc.NewConsumers(interactiveReadEventBatchConsumer)
 	rankingService := service.NewBatchRankingService(articleService, interactiveService)
-	rankingJob := ioc.InitRankingJob(rankingService)
+	rlockClient := ioc.InitRLockClient(cmdable)
+	rankingJob := ioc.InitRankingJob(rankingService, rlockClient, logger)
 	cron := ioc.InitJobs(logger, rankingJob)
 	app := &App{
 		web:       engine,

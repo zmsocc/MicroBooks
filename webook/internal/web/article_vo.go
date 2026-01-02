@@ -34,7 +34,7 @@ type LikeReq struct {
 
 type CollectReq struct {
 	Id int64 `json:"id"`
-	// 点赞，取消点赞都复用这个
+	// 收藏，取消收藏都复用这个
 	Collect bool `json:"like"`
 }
 

@@ -2,6 +2,7 @@ package article
 
 import (
 	"context"
+	"fmt"
 	"github.com/IBM/sarama"
 	"github.com/zmsocc/practice/webook/internal/repository"
 	"github.com/zmsocc/practice/webook/pkg/logger"
@@ -54,4 +55,12 @@ func (k *InteractiveReadEventBatchConsumer) Consume(msg []*sarama.ConsumerMessag
 			logger.Error(err))
 	}
 	return nil
+}
+
+func t1() {
+	var m []int
+	m = make([]int, 3)
+	n := []int{1, 2, 3}
+	fmt.Println(m)
+	fmt.Println(n)
 }

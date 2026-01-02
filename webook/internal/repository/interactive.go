@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"errors"
+	"github.com/ecodeclub/ekit/slice"
 	"github.com/zmsocc/practice/webook/internal/domain"
 	"github.com/zmsocc/practice/webook/internal/repository/cache"
 	"github.com/zmsocc/practice/webook/internal/repository/dao"
@@ -14,12 +15,13 @@ type InteractiveRepository interface {
 	BatchIncrReadCnt(ctx context.Context, biz []string, bizId []int64) error
 	IncrLike(ctx context.Context, biz string, bizId, uid int64) error
 	DecrLike(ctx context.Context, biz string, bizId, uid int64) error
-	AddCollectionItem(ctx context.Context, biz string, bizId, uid int64) error
+	AddCollectionItem(ctx context.Context, biz string, bizId, cid, uid int64) error
 	DecrCollection(ctx context.Context, biz string, bizId, uid int64) error
 	Liked(ctx context.Context, biz string, bizId, uid int64) (bool, error)
 	Collected(ctx context.Context, biz string, bizId, uid int64) (bool, error)
 	Get(ctx context.Context, biz string, bizId int64) (domain.Interactive, error)
 	AddRecord(ctx context.Context, aid int64, uid int64) error
+	GetByIds(ctx context.Context, biz string, bizIds []int64) ([]domain.Interactive, error)
 }
 
 type interactiveRepository struct {
@@ -76,10 +78,11 @@ func (i *interactiveRepository) DecrLike(ctx context.Context, biz string, bizId,
 	return i.cache.DecrLikeCntIfPresent(ctx, biz, bizId)
 }
 
-func (i *interactiveRepository) AddCollectionItem(ctx context.Context, biz string, bizId, uid int64) error {
+func (i *interactiveRepository) AddCollectionItem(ctx context.Context, biz string, bizId, cid, uid int64) error {
 	err := i.dao.InsertCollectionBiz(ctx, dao.UserCollectionBiz{
 		Biz:   biz,
 		BizId: bizId,
+		Cid:   cid,
 		Uid:   uid,
 	})
 	if err != nil {
@@ -145,6 +148,16 @@ func (i *interactiveRepository) Get(ctx context.Context, biz string, bizId int64
 		}
 	}()
 	return intr, nil
+}
+
+func (i *interactiveRepository) GetByIds(ctx context.Context, biz string, bizIds []int64) ([]domain.Interactive, error) {
+	vals, err := i.dao.GetByIds(ctx, biz, bizIds)
+	if err != nil {
+		return nil, err
+	}
+	return slice.Map[dao.Interactive, domain.Interactive](vals, func(idx int, src dao.Interactive) domain.Interactive {
+		return i.toDomain(src)
+	}), nil
 }
 
 func (i *interactiveRepository) toDomain(dao dao.Interactive) domain.Interactive {

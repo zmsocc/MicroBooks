@@ -7,7 +7,7 @@ import (
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
 	trace2 "go.opentelemetry.io/otel/trace"
 	"time"
 )
@@ -29,8 +29,8 @@ func InitOTEL() func(ctx context.Context) {
 		nopProvider: trace2.NewNoopTracerProvider(),
 		provider:    tp,
 	}
-	// 监听配置变更就可以了
-	otel.SetTracerProvider(newTp)
+	//监听配置变更就可以了
+	otel.SetTracerProvider(newTp.provider)
 	return func(ctx context.Context) {
 		err = tp.Shutdown(ctx)
 		if err != nil {

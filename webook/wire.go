@@ -41,6 +41,7 @@ func InitWebServer() *App {
 
 		rankingServiceSet,
 		interactiveSvcProvider,
+		ioc.InitRLockClient,
 		ioc.InitJobs,
 		ioc.InitRankingJob,
 

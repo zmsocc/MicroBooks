@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/zmsocc/practice/webook/internal/domain"
 	"github.com/zmsocc/practice/webook/internal/repository"
+	"github.com/zmsocc/practice/webook/pkg/logger"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -12,7 +13,7 @@ type InteractiveService interface {
 	IncrReadCnt(ctx context.Context, biz string, bizId int64) error
 	Like(ctx context.Context, biz string, bizId, uid int64) error
 	CancelLike(ctx context.Context, biz string, bizId, uid int64) error
-	Collect(ctx context.Context, biz string, bizId, uid int64) error
+	Collect(ctx context.Context, biz string, bizId, cid, uid int64) error
 	CancelCollect(ctx context.Context, biz string, bizId, uid int64) error
 	Get(ctx context.Context, biz string, bizId, uid int64) (domain.Interactive, error)
 	GetByIds(ctx context.Context, biz string, bizIds []int64) (map[int64]domain.Interactive, error)
@@ -20,11 +21,13 @@ type InteractiveService interface {
 
 type interactiveService struct {
 	repo repository.InteractiveRepository
+	l    logger.Logger
 }
 
-func NewInteractiveService(repo repository.InteractiveRepository) InteractiveService {
+func NewInteractiveService(repo repository.InteractiveRepository, l logger.Logger) InteractiveService {
 	return &interactiveService{
 		repo: repo,
+		l:    l,
 	}
 }
 
@@ -40,8 +43,8 @@ func (i *interactiveService) CancelLike(ctx context.Context, biz string, bizId, 
 	return i.repo.DecrLike(ctx, biz, bizId, uid)
 }
 
-func (i *interactiveService) Collect(ctx context.Context, biz string, bizId, uid int64) error {
-	return i.repo.AddCollectionItem(ctx, biz, bizId, uid)
+func (i *interactiveService) Collect(ctx context.Context, biz string, bizId, cid, uid int64) error {
+	return i.repo.AddCollectionItem(ctx, biz, bizId, cid, uid)
 }
 
 func (i *interactiveService) CancelCollect(ctx context.Context, biz string, bizId, uid int64) error {
@@ -80,6 +83,13 @@ func (i *interactiveService) Get(ctx context.Context, biz string, bizId, uid int
 }
 
 func (i *interactiveService) GetByIds(ctx context.Context, biz string, bizIds []int64) (map[int64]domain.Interactive, error) {
-	//TODO implement me
-	panic("implement me")
+	intrs, err := i.repo.GetByIds(ctx, biz, bizIds)
+	if err != nil {
+		return nil, err
+	}
+	res := make(map[int64]domain.Interactive, len(intrs))
+	for _, intr := range intrs {
+		res[intr.BizId] = intr
+	}
+	return res, nil
 }
