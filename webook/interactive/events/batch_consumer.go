@@ -1,10 +1,10 @@
-package article
+package events
 
 import (
 	"context"
 	"fmt"
 	"github.com/IBM/sarama"
-	"github.com/zmsocc/practice/webook/internal/repository"
+	"github.com/zmsocc/practice/webook/interactive/repository"
 	"github.com/zmsocc/practice/webook/pkg/logger"
 	"github.com/zmsocc/practice/webook/pkg/saramax"
 	"time"

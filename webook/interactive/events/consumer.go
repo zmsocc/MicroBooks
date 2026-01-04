@@ -1,13 +1,16 @@
-package article
+package events
 
 import (
 	"context"
 	"github.com/IBM/sarama"
-	"github.com/zmsocc/practice/webook/internal/repository"
+	"github.com/zmsocc/practice/webook/interactive/repository"
+	"github.com/zmsocc/practice/webook/internal/event"
 	"github.com/zmsocc/practice/webook/pkg/logger"
 	"github.com/zmsocc/practice/webook/pkg/saramax"
 	"time"
 )
+
+var _ event.Consumer = &InteractiveReadEventConsumer{}
 
 type InteractiveReadEventConsumer struct {
 	client sarama.Client

@@ -3,8 +3,8 @@ package ioc
 import (
 	"github.com/IBM/sarama"
 	"github.com/spf13/viper"
+	"github.com/zmsocc/practice/webook/interactive/events"
 	"github.com/zmsocc/practice/webook/internal/event"
-	"github.com/zmsocc/practice/webook/internal/event/article"
 )
 
 func InitKafka() sarama.Client {
@@ -36,6 +36,6 @@ func NewSyncProducer(client sarama.Client) sarama.SyncProducer {
 }
 
 // NewConsumers 面临的问题依旧是所有的 Consumer 在这里注册一下
-func NewConsumers(c1 *article.InteractiveReadEventBatchConsumer) []event.Consumer {
+func NewConsumers(c1 *events.InteractiveReadEventBatchConsumer) []event.Consumer {
 	return []event.Consumer{c1}
 }

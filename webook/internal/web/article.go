@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"github.com/ecodeclub/ekit/slice"
 	"github.com/gin-gonic/gin"
+	domain2 "github.com/zmsocc/practice/webook/interactive/domain"
+	service2 "github.com/zmsocc/practice/webook/interactive/service"
 	"github.com/zmsocc/practice/webook/internal/domain"
 	"github.com/zmsocc/practice/webook/internal/service"
 	"github.com/zmsocc/practice/webook/internal/web/ijwt"
@@ -18,12 +20,12 @@ import (
 type ArticleHandler struct {
 	svc     service.ArticleService
 	l       logger.Logger
-	intrSvc service.InteractiveService
+	intrSvc service2.InteractiveService
 	biz     string
 }
 
 func NewArticleHandler(svc service.ArticleService, l logger.Logger,
-	intrSvc service.InteractiveService) *ArticleHandler {
+	intrSvc service2.InteractiveService) *ArticleHandler {
 	return &ArticleHandler{
 		svc:     svc,
 		l:       l,
@@ -217,7 +219,7 @@ func (h *ArticleHandler) Collect(ctx *gin.Context) (Result, error) {
 	var err error
 	var req CollectReq
 	var uc ijwt.UserClaims
-	var intr domain.Interactive
+	var intr domain2.Interactive
 	if req.Collect {
 		err = h.intrSvc.Collect(ctx, h.biz, intr.BizId, req.Id, uc.Uid)
 	} else {

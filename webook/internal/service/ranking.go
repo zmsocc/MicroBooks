@@ -5,6 +5,7 @@ import (
 	"errors"
 	"github.com/ecodeclub/ekit/queue"
 	"github.com/ecodeclub/ekit/slice"
+	service2 "github.com/zmsocc/practice/webook/interactive/service"
 	"github.com/zmsocc/practice/webook/internal/domain"
 	"github.com/zmsocc/practice/webook/internal/repository"
 	"math"
@@ -19,7 +20,7 @@ type RankingService interface {
 
 type BatchRankingService struct {
 	artSvc    ArticleService
-	interSvc  InteractiveService
+	interSvc  service2.InteractiveService
 	repo      repository.RankingRepository
 	batchSize int
 	n         int
@@ -27,7 +28,7 @@ type BatchRankingService struct {
 	scoreFunc func(t time.Time, likeCnt int64) float64
 }
 
-func NewBatchRankingService(artSvc ArticleService, interSvc InteractiveService) RankingService {
+func NewBatchRankingService(artSvc ArticleService, interSvc service2.InteractiveService) RankingService {
 	return &BatchRankingService{
 		artSvc:    artSvc,
 		interSvc:  interSvc,

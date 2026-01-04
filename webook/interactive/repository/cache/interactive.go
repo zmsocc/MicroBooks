@@ -5,15 +5,14 @@ import (
 	_ "embed"
 	"fmt"
 	"github.com/redis/go-redis/v9"
-	"github.com/zmsocc/practice/webook/internal/domain"
+	"github.com/zmsocc/practice/webook/interactive/domain"
 	"strconv"
 	"time"
 )
 
 var (
-	//go:embed lua/cnt.lua
-	luaIncrCnt     string
-	ErrKeyNotExist = redis.Nil
+	//go:embed lua/interactive_incr_cnt.lua
+	luaIncrCnt string
 )
 
 const (

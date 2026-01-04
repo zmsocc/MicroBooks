@@ -11,12 +11,12 @@ import (
 
 type HistoryReadEventConsumer struct {
 	client sarama.Client
-	repo   repository.InteractiveRepository
+	repo   repository.HistoryRecordRepository
 	l      logger.Logger
 }
 
 func NewHistoryReadEventConsumer(client sarama.Client, l logger.Logger,
-	repo repository.InteractiveRepository) *HistoryReadEventConsumer {
+	repo repository.HistoryRecordRepository) *HistoryReadEventConsumer {
 	return &HistoryReadEventConsumer{
 		client: client,
 		l:      l,
@@ -25,7 +25,7 @@ func NewHistoryReadEventConsumer(client sarama.Client, l logger.Logger,
 }
 
 func (k *HistoryReadEventConsumer) Start() error {
-	cg, err := sarama.NewConsumerGroupFromClient("interactive", k.client)
+	cg, err := sarama.NewConsumerGroupFromClient("history_record", k.client)
 	if err != nil {
 		return err
 	}

@@ -8,6 +8,11 @@ package main
 
 import (
 	"github.com/google/wire"
+	"github.com/zmsocc/practice/webook/interactive/events"
+	repository2 "github.com/zmsocc/practice/webook/interactive/repository"
+	cache2 "github.com/zmsocc/practice/webook/interactive/repository/cache"
+	dao2 "github.com/zmsocc/practice/webook/interactive/repository/dao"
+	service2 "github.com/zmsocc/practice/webook/interactive/service"
 	"github.com/zmsocc/practice/webook/internal/event/article"
 	"github.com/zmsocc/practice/webook/internal/repository"
 	articles2 "github.com/zmsocc/practice/webook/internal/repository/articles"
@@ -44,13 +49,13 @@ func InitWebServer() *App {
 	syncProducer := ioc.NewSyncProducer(client)
 	producer := article.NewKafkaProducer(syncProducer)
 	articleService := service.NewArticleService(articleRepository, logger, producer)
-	interactiveDAO := dao.NewInteractiveDAO(db)
-	interactiveCache := cache.NewRedisInteractiveCache(cmdable)
-	interactiveRepository := repository.NewInteractiveRepository(interactiveDAO, interactiveCache, logger)
-	interactiveService := service.NewInteractiveService(interactiveRepository, logger)
+	interactiveDAO := dao2.NewInteractiveDAO(db)
+	interactiveCache := cache2.NewRedisInteractiveCache(cmdable)
+	interactiveRepository := repository2.NewInteractiveRepository(interactiveDAO, interactiveCache, logger)
+	interactiveService := service2.NewInteractiveService(interactiveRepository, logger)
 	articleHandler := web.NewArticleHandler(articleService, logger, interactiveService)
 	engine := ioc.InitWebServer(v, userHandler, articleHandler)
-	interactiveReadEventBatchConsumer := article.NewInteractiveReadEventBatchConsumer(client, interactiveRepository, logger)
+	interactiveReadEventBatchConsumer := events.NewInteractiveReadEventBatchConsumer(client, interactiveRepository, logger)
 	v2 := ioc.NewConsumers(interactiveReadEventBatchConsumer)
 	rankingService := service.NewBatchRankingService(articleService, interactiveService)
 	rlockClient := ioc.InitRLockClient(cmdable)
@@ -68,4 +73,4 @@ func InitWebServer() *App {
 
 var rankingServiceSet = wire.NewSet(repository.NewCachedRankingRepository, cache.NewRankingRedisCache, service.NewBatchRankingService)
 
-var interactiveSvcProvider = wire.NewSet(service.NewInteractiveService, repository.NewInteractiveRepository, dao.NewInteractiveDAO, cache.NewRedisInteractiveCache)
+var interactiveSvcProvider = wire.NewSet(service2.NewInteractiveService, repository2.NewInteractiveRepository, dao2.NewInteractiveDAO, cache2.NewRedisInteractiveCache)

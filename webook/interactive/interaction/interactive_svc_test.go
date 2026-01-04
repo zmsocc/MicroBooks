@@ -1,13 +1,13 @@
-package integration
+package interaction
 
 import (
 	"context"
 	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
-	"github.com/zmsocc/practice/webook/internal/domain"
-	"github.com/zmsocc/practice/webook/internal/integration/startup"
-	"github.com/zmsocc/practice/webook/internal/repository/dao"
+	"github.com/zmsocc/practice/webook/interactive/domain"
+	"github.com/zmsocc/practice/webook/interactive/interaction/startup"
+	"github.com/zmsocc/practice/webook/interactive/repository/dao"
 	"gorm.io/gorm"
 	"testing"
 	"time"
@@ -677,13 +677,19 @@ func (s *InteractiveTestSuite) TestGet() {
 						Status: 1,
 					}).Error
 				assert.NoError(t, err)
-				err = s.rdb.HSet(ctx, "interactive:test:3",
-					"read_cnt", 0, "collect_cnt", 1).Err()
+				err = s.rdb.HSet(ctx, "interactive:test:3", map[string]interface{}{
+					"read_cnt":    0,
+					"collect_cnt": 1,
+					"like_cnt":    0,
+				}).Err()
 				assert.NoError(t, err)
 			},
 			wantRes: domain.Interactive{
+				Biz:        "test",
 				BizId:      3,
+				ReadCnt:    0,
 				CollectCnt: 1,
+				LikeCnt:    0,
 				Collected:  true,
 				Liked:      true,
 			},

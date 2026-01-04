@@ -2,8 +2,8 @@ package service
 
 import (
 	"context"
-	"github.com/zmsocc/practice/webook/internal/domain"
-	"github.com/zmsocc/practice/webook/internal/repository"
+	"github.com/zmsocc/practice/webook/interactive/domain"
+	"github.com/zmsocc/practice/webook/interactive/repository"
 	"github.com/zmsocc/practice/webook/pkg/logger"
 	"golang.org/x/sync/errgroup"
 )

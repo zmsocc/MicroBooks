@@ -5,6 +5,8 @@ docker:
 	@docker rmi -f flycash/webook:v0.0.1
 	@docker build -t flycash/webook:v0.0.1 .
 
-grpc:
+.PHONY: grpc
 # 生成protoc文件命令
-	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative user.proto
+grpc:
+	@protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative user.proto
+	@buf generate webook/api/proto

@@ -5,6 +5,10 @@ package startup
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/wire"
+	repository2 "github.com/zmsocc/practice/webook/interactive/repository"
+	cache2 "github.com/zmsocc/practice/webook/interactive/repository/cache"
+	dao2 "github.com/zmsocc/practice/webook/interactive/repository/dao"
+	service2 "github.com/zmsocc/practice/webook/interactive/service"
 	"github.com/zmsocc/practice/webook/internal/event/article"
 	"github.com/zmsocc/practice/webook/internal/repository"
 	articles2 "github.com/zmsocc/practice/webook/internal/repository/articles"
@@ -17,21 +21,25 @@ import (
 	"github.com/zmsocc/practice/webook/ioc"
 )
 
-var thirdProvider = wire.NewSet(InitRedis,
+var thirdProvider = wire.NewSet(
+	InitRedis,
 	NewSyncProducer,
 	InitKafka,
-	InitTestDB, InitLog)
+	InitTestDB, InitLog,
+)
+
 var userSvcProvider = wire.NewSet(
 	dao.NewUserDAO,
 	cache.NewUserCache,
 	repository.NewUserRepository,
-	service.NewUserService)
+	service.NewUserService,
+)
 
 var interactiveSvcProvider = wire.NewSet(
-	service.NewInteractiveService,
-	repository.NewInteractiveRepository,
-	dao.NewInteractiveDAO,
-	cache.NewRedisInteractiveCache,
+	service2.NewInteractiveService,
+	repository2.NewInteractiveRepository,
+	dao2.NewInteractiveDAO,
+	cache2.NewRedisInteractiveCache,
 )
 
 var articlSvcProvider = wire.NewSet(
@@ -94,9 +102,4 @@ func InitUserSvc() service.UserService {
 func InitJwtHdl() ijwt.Handler {
 	wire.Build(thirdProvider, ijwt.NewRedisJWTHandler)
 	return ijwt.NewRedisJWTHandler(nil)
-}
-
-func InitInteractiveService() service.InteractiveService {
-	wire.Build(thirdProvider, interactiveSvcProvider)
-	return service.NewInteractiveService(nil, nil)
 }

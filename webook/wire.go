@@ -4,6 +4,11 @@ package main
 
 import (
 	"github.com/google/wire"
+	"github.com/zmsocc/practice/webook/interactive/events"
+	repository2 "github.com/zmsocc/practice/webook/interactive/repository"
+	cache2 "github.com/zmsocc/practice/webook/interactive/repository/cache"
+	dao2 "github.com/zmsocc/practice/webook/interactive/repository/dao"
+	service2 "github.com/zmsocc/practice/webook/interactive/service"
 	"github.com/zmsocc/practice/webook/internal/event/article"
 	"github.com/zmsocc/practice/webook/internal/repository"
 	articles2 "github.com/zmsocc/practice/webook/internal/repository/articles"
@@ -23,10 +28,10 @@ var rankingServiceSet = wire.NewSet(
 )
 
 var interactiveSvcProvider = wire.NewSet(
-	service.NewInteractiveService,
-	repository.NewInteractiveRepository,
-	dao.NewInteractiveDAO,
-	cache.NewRedisInteractiveCache,
+	service2.NewInteractiveService,
+	repository2.NewInteractiveRepository,
+	dao2.NewInteractiveDAO,
+	cache2.NewRedisInteractiveCache,
 )
 
 func InitWebServer() *App {
@@ -34,6 +39,7 @@ func InitWebServer() *App {
 		// 最基础的第三方依赖
 		ioc.InitDB,
 		ioc.InitRedis,
+		ioc.InitRLockClient,
 		ioc.InitLogger,
 		ioc.InitKafka,
 		ioc.NewConsumers,
@@ -41,12 +47,11 @@ func InitWebServer() *App {
 
 		rankingServiceSet,
 		interactiveSvcProvider,
-		ioc.InitRLockClient,
 		ioc.InitJobs,
 		ioc.InitRankingJob,
 
 		// consumer
-		article.NewInteractiveReadEventBatchConsumer,
+		events.NewInteractiveReadEventBatchConsumer,
 		article.NewKafkaProducer,
 
 		// 初始化 DAO

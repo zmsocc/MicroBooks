@@ -235,6 +235,12 @@ type Interactive struct {
 	CollectCnt int64
 	Utime      int64
 	Ctime      int64
-	Liked      bool
-	Collected  bool
+}
+
+type Collection struct {
+	Id    int64  `gorm:"primaryKey;autoIncrement"`
+	Name  string `gorm:"type:varchar(1024)"`
+	Uid   int64  `gorm:""`
+	Ctime int64
+	Utime int64
 }

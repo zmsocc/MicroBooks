@@ -3,6 +3,7 @@ package ioc
 import (
 	"fmt"
 	"github.com/spf13/viper"
+	dao2 "github.com/zmsocc/practice/webook/interactive/repository/dao"
 	"github.com/zmsocc/practice/webook/internal/repository/dao"
 	"github.com/zmsocc/practice/webook/pkg/gormx"
 	"github.com/zmsocc/practice/webook/pkg/logger"
@@ -28,6 +29,10 @@ func InitDB() *gorm.DB {
 		panic(err)
 	}
 	err = dao.InitTables(db)
+	if err != nil {
+		panic(err)
+	}
+	err = dao2.InitTables(db)
 	if err != nil {
 		panic(err)
 	}

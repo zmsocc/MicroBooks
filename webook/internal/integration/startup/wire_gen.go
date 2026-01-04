@@ -9,6 +9,10 @@ package startup
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/wire"
+	repository2 "github.com/zmsocc/practice/webook/interactive/repository"
+	cache2 "github.com/zmsocc/practice/webook/interactive/repository/cache"
+	dao2 "github.com/zmsocc/practice/webook/interactive/repository/dao"
+	service2 "github.com/zmsocc/practice/webook/interactive/service"
 	"github.com/zmsocc/practice/webook/internal/event/article"
 	"github.com/zmsocc/practice/webook/internal/repository"
 	articles2 "github.com/zmsocc/practice/webook/internal/repository/articles"
@@ -45,29 +49,29 @@ func InitWebServer() *gin.Engine {
 	syncProducer := NewSyncProducer(client)
 	producer := article.NewKafkaProducer(syncProducer)
 	articleService := service.NewArticleService(articleRepository, logger, producer)
-	interactiveDAO := dao.NewInteractiveDAO(gormDB)
-	interactiveCache := cache.NewRedisInteractiveCache(cmdable)
-	interactiveRepository := repository.NewInteractiveRepository(interactiveDAO, interactiveCache, logger)
-	interactiveService := service.NewInteractiveService(interactiveRepository, logger)
+	interactiveDAO := dao2.NewInteractiveDAO(gormDB)
+	interactiveCache := cache2.NewRedisInteractiveCache(cmdable)
+	interactiveRepository := repository2.NewInteractiveRepository(interactiveDAO, interactiveCache, logger)
+	interactiveService := service2.NewInteractiveService(interactiveRepository, logger)
 	articleHandler := web.NewArticleHandler(articleService, logger, interactiveService)
 	engine := ioc.InitWebServer(v, userHandler, articleHandler)
 	return engine
 }
 
-func InitArticleHandler(dao2 articles.ArticleDAO) *web.ArticleHandler {
+func InitArticleHandler(dao3 articles.ArticleDAO) *web.ArticleHandler {
 	cmdable := InitRedis()
 	articleCache := cache.NewArticleCache(cmdable)
 	logger := InitLog()
-	articleRepository := articles2.NewArticleRepository(dao2, articleCache, logger)
+	articleRepository := articles2.NewArticleRepository(dao3, articleCache, logger)
 	client := InitKafka()
 	syncProducer := NewSyncProducer(client)
 	producer := article.NewKafkaProducer(syncProducer)
 	articleService := service.NewArticleService(articleRepository, logger, producer)
 	gormDB := InitTestDB()
-	interactiveDAO := dao.NewInteractiveDAO(gormDB)
-	interactiveCache := cache.NewRedisInteractiveCache(cmdable)
-	interactiveRepository := repository.NewInteractiveRepository(interactiveDAO, interactiveCache, logger)
-	interactiveService := service.NewInteractiveService(interactiveRepository, logger)
+	interactiveDAO := dao2.NewInteractiveDAO(gormDB)
+	interactiveCache := cache2.NewRedisInteractiveCache(cmdable)
+	interactiveRepository := repository2.NewInteractiveRepository(interactiveDAO, interactiveCache, logger)
+	interactiveService := service2.NewInteractiveService(interactiveRepository, logger)
 	articleHandler := web.NewArticleHandler(articleService, logger, interactiveService)
 	return articleHandler
 }
@@ -88,26 +92,17 @@ func InitJwtHdl() ijwt.Handler {
 	return handler
 }
 
-func InitInteractiveService() service.InteractiveService {
-	gormDB := InitTestDB()
-	interactiveDAO := dao.NewInteractiveDAO(gormDB)
-	cmdable := InitRedis()
-	interactiveCache := cache.NewRedisInteractiveCache(cmdable)
-	logger := InitLog()
-	interactiveRepository := repository.NewInteractiveRepository(interactiveDAO, interactiveCache, logger)
-	interactiveService := service.NewInteractiveService(interactiveRepository, logger)
-	return interactiveService
-}
-
 // wire.go:
 
-var thirdProvider = wire.NewSet(InitRedis,
+var thirdProvider = wire.NewSet(
+	InitRedis,
 	NewSyncProducer,
 	InitKafka,
-	InitTestDB, InitLog)
+	InitTestDB, InitLog,
+)
 
 var userSvcProvider = wire.NewSet(dao.NewUserDAO, cache.NewUserCache, repository.NewUserRepository, service.NewUserService)
 
-var interactiveSvcProvider = wire.NewSet(service.NewInteractiveService, repository.NewInteractiveRepository, dao.NewInteractiveDAO, cache.NewRedisInteractiveCache)
+var interactiveSvcProvider = wire.NewSet(service2.NewInteractiveService, repository2.NewInteractiveRepository, dao2.NewInteractiveDAO, cache2.NewRedisInteractiveCache)
 
 var articlSvcProvider = wire.NewSet(articles.NewArticleDao, cache.NewArticleCache, articles2.NewArticleRepository, service.NewArticleService)

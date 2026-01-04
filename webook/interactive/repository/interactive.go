@@ -4,9 +4,9 @@ import (
 	"context"
 	"errors"
 	"github.com/ecodeclub/ekit/slice"
-	"github.com/zmsocc/practice/webook/internal/domain"
-	"github.com/zmsocc/practice/webook/internal/repository/cache"
-	"github.com/zmsocc/practice/webook/internal/repository/dao"
+	"github.com/zmsocc/practice/webook/interactive/domain"
+	"github.com/zmsocc/practice/webook/interactive/repository/cache"
+	"github.com/zmsocc/practice/webook/interactive/repository/dao"
 	"github.com/zmsocc/practice/webook/pkg/logger"
 )
 
@@ -162,6 +162,8 @@ func (i *interactiveRepository) GetByIds(ctx context.Context, biz string, bizIds
 
 func (i *interactiveRepository) toDomain(dao dao.Interactive) domain.Interactive {
 	return domain.Interactive{
+		Biz:        dao.Biz,
+		BizId:      dao.BizId,
 		ReadCnt:    dao.ReadCnt,
 		LikeCnt:    dao.LikeCnt,
 		CollectCnt: dao.CollectCnt,
