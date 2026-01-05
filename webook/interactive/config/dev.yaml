@@ -1,0 +1,18 @@
+db:
+  dsn: "root:root@tcp(localhost:13336)/webook"
+
+redis:
+  addr: "localhost:6379"
+
+kafka:
+  addrs:
+    - "localhost:9092"
+
+grpc:
+  server:
+    addr: ":8090"
+
+#  client:
+#    user:
+#      addr: "user.mycompany.com:8090"
+#    intr:
